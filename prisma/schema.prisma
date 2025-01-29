@@ -1,0 +1,153 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name             String?
+  email            String?   @unique
+  emailVerified    DateTime?
+  image            String?
+  hashedPassword   String?
+  role             Role      @default(MENTEE)
+  onboardingCompleted Boolean @default(false)
+  accounts         Account[]
+  sessions         Session[]
+  passwordResets   PasswordReset[]
+
+  // Mentor specific fields
+  mentorProfile MentorProfile?
+
+  // Mentee specific fields
+  mentorReviews MentorReview[] @relation("ReviewAuthor")
+  bookings      Booking[]
+  messages      Message[]
+}
+
+model MentorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  title       String
+  company     String?
+  bio         String?  @db.Text
+  expertise   String[]
+  languages   String[]
+  skills      String[]
+  experience  String
+  interests   String[]
+  goals       String[]
+  hourlyRate  Float
+  rating      Float    @default(0)
+  github      String?
+  linkedin    String?
+  website     String?
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availability Availability[]
+  reviews      MentorReview[]
+  bookings     Booking[]
+}
+
+model MentorReview {
+  id              String       @id @default(cuid())
+  mentorProfileId String
+  authorId        String
+  rating          Int
+  comment         String       @db.Text
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+  author          User          @relation("ReviewAuthor", fields: [authorId], references: [id])
+}
+
+model Availability {
+  id              String       @id @default(cuid())
+  mentorProfileId String
+  day             String
+  slots           Json         // Array of { start: string, end: string }
+  mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id              String       @id @default(cuid())
+  mentorProfileId String
+  menteeId        String
+  startTime       DateTime
+  endTime         DateTime
+  status          BookingStatus @default(PENDING)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+  mentee          User          @relation(fields: [menteeId], references: [id], onDelete: Cascade)
+  messages        Message[]
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  bookingId  String
+  senderId   String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expires   DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  MENTOR
+  MENTEE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+} 
