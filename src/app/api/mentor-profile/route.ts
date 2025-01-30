@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { authOptions } from '../auth/[...nextauth]/route';
 
+export const dynamic = 'force-dynamic';
+
+
 const mentorProfileSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
   company: z.string().optional(),
