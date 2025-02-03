@@ -1,4 +1,5 @@
 import ConditionalNavbar from '@/components/ConditionalNavbar';
+import Providers from '@/components/providers';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
@@ -19,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ConditionalNavbar />
-        {children}
+        <Providers>
+          <ConditionalNavbar />
+          {children}
+        </Providers>
       </body>
     </html>
   );

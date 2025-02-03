@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile, email, credentials }) {
+    async signIn({ user, account, profile }) {
       if (!user.email) return false;
 
       try {
@@ -36,9 +36,9 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!dbUser) {
-          // Get role from URL parameters
-          const searchParams = new URLSearchParams(account?.access_token || '');
-          const isMentor = searchParams.get('mentor') === 'true';
+          // Get role from callback URL
+          const callbackUrl = account?.callback_url || '';
+          const isMentor = (callbackUrl as string).includes('type=mentor');
           
           // Create new user
           dbUser = await prisma.user.create({
@@ -50,23 +50,6 @@ export const authOptions: NextAuthOptions = {
               onboardingCompleted: false,
             },
           });
-
-          // Create account link
-          if (account) {
-            await prisma.account.create({
-              data: {
-                userId: dbUser.id,
-                type: account.type,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-                access_token: account.access_token,
-                token_type: account.token_type,
-                scope: account.scope,
-                id_token: account.id_token,
-                session_state: account.session_state,
-              },
-            });
-          }
         }
 
         return true;
@@ -76,17 +59,11 @@ export const authOptions: NextAuthOptions = {
       }
     },
 
-    async jwt({ token, user, account, profile, trigger, session }) {
+    async jwt({ token, user }) {
       if (user) {
-        // Fetch user from database to get role
-        const dbUser = await prisma.user.findUnique({
-          where: { email: user.email! },
-        });
-
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.id = dbUser.id;
-        }
+        // Add role to token
+        token.role = user.role;
+        token.id = user.id;
       }
       return token;
     },
@@ -103,10 +80,9 @@ export const authOptions: NextAuthOptions = {
       // Handle OAuth callback URLs
       if (url.includes('/api/auth/callback/')) {
         const params = new URLSearchParams(url.split('?')[1]);
-        const callbackUrl = params.get('callbackUrl');
-        const isMentor = callbackUrl?.includes('type=mentor');
+        const type = params.get('type');
         
-        if (isMentor) {
+        if (type === 'mentor') {
           return `${baseUrl}/become-mentor/get-started`;
         }
         return `${baseUrl}/dashboard/mentee`;

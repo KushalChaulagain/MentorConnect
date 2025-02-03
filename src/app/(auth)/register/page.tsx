@@ -26,12 +26,10 @@ export default function RegisterPage() {
   };
 
   const handleOAuthSignIn = (provider: string) => {
-    const callbackUrl = isMentorRegistration 
-      ? `/api/auth/callback/${provider}?mentor=true` 
-      : `/api/auth/callback/${provider}`;
-      
     signIn(provider, {
-      callbackUrl,
+      callbackUrl: isMentorRegistration 
+        ? `/register?type=mentor` 
+        : `/dashboard/mentee`,
     });
   };
 

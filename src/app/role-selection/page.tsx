@@ -66,8 +66,7 @@ export default function RoleSelection() {
       });
 
       // Redirect to login with mentee dashboard as callback
-      router.push(`/login?callbackUrl=${encodeURIComponent('/dashboard/mentee')}`);
-
+      router.push(`/login?callbackUrl=${encodeURIComponent('/dashboard/mentor')}`);
     } catch (error) {
       console.error('Error updating role:', error);
       toast({

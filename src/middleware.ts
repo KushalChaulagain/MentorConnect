@@ -13,6 +13,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  if (!token && (path.startsWith('/dashboard') || path.startsWith('/become-mentor'))) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   // If logged in user tries to access auth pages
   if (token && (path === '/login' || path === '/register')) {
     const dashboardPath = token.role === 'MENTOR' ? '/dashboard/mentor' : '/dashboard/mentee';
@@ -24,7 +28,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/mentee', request.url));
   }
 
-  if (token?.role === 'MENTOR' && path.startsWith('/dashboard/mentor')) {
+  if (token?.role === 'MENTOR' && path.startsWith('/dashboard/mentee')) {
     return NextResponse.redirect(new URL('/dashboard/mentor', request.url));
   }
 
