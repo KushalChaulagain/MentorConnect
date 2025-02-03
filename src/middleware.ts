@@ -4,16 +4,15 @@ import { NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
-
-  // Get the pathname of the request
   const path = request.nextUrl.pathname;
 
-  // If user is not logged in and trying to access protected routes
-  if (!token && (path.startsWith('/dashboard') || path.startsWith('/become-mentor'))) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Allow access to the become-mentor landing page
+  if (path === '/become-mentor') {
+    return NextResponse.next();
   }
 
-  if (!token && (path.startsWith('/dashboard') || path.startsWith('/become-mentor'))) {
+  // If user is not logged in and trying to access protected routes
+  if (!token && (path.startsWith('/dashboard') || path.startsWith('/become-mentor/'))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
