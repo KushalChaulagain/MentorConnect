@@ -28,7 +28,7 @@ export default function RegisterPage() {
   const handleOAuthSignIn = (provider: string) => {
     signIn(provider, {
       callbackUrl: isMentorRegistration 
-        ? `/register?type=mentor` 
+        ? `/become-mentor/get-started?role=mentor` 
         : `/dashboard/mentee`,
     });
   };

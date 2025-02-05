@@ -45,6 +45,16 @@ export default function LoginPage() {
     }
   };
 
+  const handleOAuthSignIn = (provider: string) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const isMentor = searchParams.get('type') === 'mentor';
+    
+    signIn(provider, {
+      callbackUrl: isMentor ? '/become-mentor/get-started' : '/dashboard/mentee',
+      state: isMentor ? 'type=mentor' : undefined
+    });
+  };
+
   return (
     <div className="min-h-screen flex">
       {/* Left section */}
@@ -157,7 +167,7 @@ export default function LoginPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => signIn('google', { callbackUrl: searchParams.get('callbackUrl') || '/dashboard/mentee' })}
+                  onClick={() => handleOAuthSignIn('google')}
                   className="w-full inline-flex justify-center items-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">

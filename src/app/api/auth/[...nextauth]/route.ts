@@ -12,6 +12,12 @@ declare module "next-auth" {
       id?: string;
     } & DefaultSession["user"]
   }
+
+  interface User {
+    provider?: string;
+    role?: 'MENTOR' | 'MENTEE';
+    id?: string;
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -36,9 +42,9 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!dbUser) {
-          // Get role from callback URL
-          const callbackUrl = account?.callback_url || '';
-          const isMentor = (callbackUrl as string).includes('type=mentor');
+          // Get role from URL parameters
+          const searchParams = new URLSearchParams(account?.state as string);
+          const isMentor = searchParams.get('role') === 'mentor';
           
           // Create new user
           dbUser = await prisma.user.create({
@@ -52,6 +58,11 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
+        // Add role and provider to user object
+        user.role = dbUser.role as 'MENTOR' | 'MENTEE';
+        user.id = dbUser.id;
+        user.provider = account?.provider;
+
         return true;
       } catch (error) {
         console.error("Error in signIn callback:", error);
@@ -59,12 +70,18 @@ export const authOptions: NextAuthOptions = {
       }
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
-        // Add role to token
         token.role = user.role;
         token.id = user.id;
+        token.provider = user.provider;
       }
+
+      // Handle role updates during session
+      if (trigger === 'update' && session?.user?.role) {
+        token.role = session.user.role;
+      }
+
       return token;
     },
 
@@ -72,6 +89,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.role = token.role as 'MENTOR' | 'MENTEE';
         session.user.id = token.id as string;
+        session.user.provider = token.provider as string;
       }
       return session;
     },
@@ -80,15 +98,16 @@ export const authOptions: NextAuthOptions = {
       // Handle OAuth callback URLs
       if (url.includes('/api/auth/callback/')) {
         const params = new URLSearchParams(url.split('?')[1]);
-        const type = params.get('type');
+        const role = params.get('role');
         
-        if (type === 'mentor') {
+        if (role === 'mentor') {
           return `${baseUrl}/become-mentor/get-started`;
         }
+        
         return `${baseUrl}/dashboard/mentee`;
       }
       
-      // For all other URLs within our domain, keep them as is
+      // Handle direct navigation to protected pages
       if (url.startsWith(baseUrl)) {
         return url;
       }
@@ -99,6 +118,9 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/login',
     error: '/auth/error',
+  },
+  session: {
+    strategy: 'jwt',
   },
 };
 
