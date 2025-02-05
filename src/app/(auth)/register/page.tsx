@@ -6,22 +6,57 @@ import { Label } from "@/components/ui/label";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { toast } from 'sonner';
 
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isMentorRegistration = searchParams.get('type') === 'mentor';
+  const isMentorRegistration = searchParams.get('role') === 'mentor';
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle registration logic here
+    setIsLoading(true);
+    const formData = new FormData(e.target as HTMLFormElement);
     
-    if (isMentorRegistration) {
-      router.push('/become-mentor/get-started');
-    } else {
-      router.push('/dashboard');
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.get('fullName'),
+          email: formData.get('email'),
+          password: formData.get('password'),
+          role: isMentorRegistration ? 'MENTOR' : 'MENTEE',
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // After successful registration, sign in the user
+      const result = await signIn('credentials', {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        callbackUrl: isMentorRegistration 
+          ? '/become-mentor/get-started?role=mentor'
+          : '/dashboard/mentee',
+        redirect: true,
+      });
+      
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to register');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -110,9 +145,14 @@ export default function RegisterPage() {
             <div>
               <Button
                 type="submit"
+                disabled={isLoading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                {isMentorRegistration ? "Start Mentoring" : "Sign up"}
+                {isLoading ? (
+                  <span>Registering...</span>
+                ) : (
+                  isMentorRegistration ? "Start Mentoring" : "Sign up"
+                )}
               </Button>
             </div>
           </form>

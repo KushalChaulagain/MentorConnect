@@ -5,17 +5,6 @@ import { NextResponse } from 'next/server';
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const path = request.nextUrl.pathname;
-  const searchParams = request.nextUrl.searchParams;
-
-  // Prevent redirect loops for login page
-  if (path === '/login') {
-    // If already logged in, redirect to appropriate dashboard
-    if (token) {
-      const dashboardPath = token.role === 'MENTOR' ? '/dashboard/mentor' : '/dashboard/mentee';
-      return NextResponse.redirect(new URL(dashboardPath, request.url));
-    }
-    return NextResponse.next();
-  }
 
   // Allow access to the become-mentor landing page
   if (path === '/become-mentor') {
@@ -24,18 +13,11 @@ export async function middleware(request: NextRequest) {
 
   // If user is not logged in and trying to access protected routes
   if (!token && (path.startsWith('/dashboard') || path.startsWith('/become-mentor/'))) {
-    // Get the role parameter if it exists
-    const role = searchParams.get('role');
-    const callbackUrl = encodeURIComponent(path);
-    const loginUrl = role 
-      ? `/login?callbackUrl=${callbackUrl}&role=${role}`
-      : `/login?callbackUrl=${callbackUrl}`;
-    
-    return NextResponse.redirect(new URL(loginUrl, request.url));
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // If logged in user tries to access auth pages
-  if (token && (path === '/register')) {
+  if (token && (path === '/login' || path === '/register')) {
     const dashboardPath = token.role === 'MENTOR' ? '/dashboard/mentor' : '/dashboard/mentee';
     return NextResponse.redirect(new URL(dashboardPath, request.url));
   }

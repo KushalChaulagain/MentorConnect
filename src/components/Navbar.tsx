@@ -45,12 +45,11 @@ export default function Navbar() {
             
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link href="/about" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${pathname === '/about' ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-300 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-200'}`}>About</Link>
+            <Link href="/become-mentee" className="px-3 py-2 text-sm font-medium ">Find a Mentor</Link>
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
             <ThemeToggle />
-            <Link href="/login" className={`px-3 py-2 rounded-md text-sm font-medium ${pathname === '/login' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}>Login</Link>
-            <Link href="/register" className="px-3 py-2 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600">Sign Up</Link>
           </div>
           <div className="flex items-center sm:hidden">
             <ThemeToggle />
@@ -68,8 +67,6 @@ export default function Navbar() {
           <Link href="/find-mentor" className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${pathname === '/find-mentor' ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-200' : 'border-transparent text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'}`}>Find Mentor</Link>
           <Link href="/register?type=mentor" className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${pathname === '/become-mentor' ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-200' : 'border-transparent text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'}`}>Become a Mentor</Link>
           <Link href="/about" className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${pathname === '/about' ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-200' : 'border-transparent text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'}`}>About</Link>
-          <Link href="/login" className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${pathname === '/login' ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-200' : 'border-transparent text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'}`}>Login</Link>
-          <Link href="/register" className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${pathname === '/register' ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-200' : 'border-transparent text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'}`}>Sign Up</Link>
         </div>
       </div>
     </nav>

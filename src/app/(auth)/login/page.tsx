@@ -46,13 +46,13 @@ export default function LoginPage() {
   };
 
   const handleOAuthSignIn = (provider: string) => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const isMentor = searchParams.get('type') === 'mentor';
-    
     signIn(provider, {
-      callbackUrl: isMentor ? '/become-mentor/get-started' : '/dashboard/mentee',
-      state: isMentor ? 'type=mentor' : undefined
+      callbackUrl: searchParams.get('type') === 'mentor' 
+        ? `/become-mentor/get-started` 
+        : `/dashboard/mentee`,
+      state: searchParams.get('type') === 'mentor' ? 'role=mentor' : 'role=mentee'
     });
+
   };
 
   return (
