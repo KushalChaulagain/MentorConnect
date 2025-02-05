@@ -1,6 +1,7 @@
 import ConditionalNavbar from '@/components/ConditionalNavbar';
 import Providers from '@/components/providers';
 import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -24,6 +25,7 @@ export default function RootLayout({
           <ConditionalNavbar />
           {children}
         </Providers>
+        <Toaster />
       </body>
     </html>
   );

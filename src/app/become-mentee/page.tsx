@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { FaGraduationCap } from 'react-icons/fa';
+import { FaChartLine, FaClock, FaCode, FaComments, FaGraduationCap, FaUsers } from 'react-icons/fa';
 
 export default function BecomeMenteePage() {
   const router = useRouter();
@@ -59,7 +59,71 @@ export default function BecomeMenteePage() {
                   Get personalized guidance from experienced developers in your field.
                 </p>
               </div>
-              {/* Add more benefit cards as needed */}
+
+              {/* Career Growth Card */}
+              <div className="flex flex-col items-start">
+                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
+                  <FaChartLine className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                  Accelerate Career Growth
+                </h3>
+                <p className="mt-2 text-gray-500 dark:text-gray-400">
+                  Fast-track your professional development with structured learning paths and career advice.
+                </p>
+              </div>
+
+              {/* Real Projects Card */}
+              <div className="flex flex-col items-start">
+                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
+                  <FaCode className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                  Work on Real Projects
+                </h3>
+                <p className="mt-2 text-gray-500 dark:text-gray-400">
+                  Get hands-on experience with real-world projects and practical code reviews.
+                </p>
+              </div>
+
+              {/* Flexible Learning Card */}
+              <div className="flex flex-col items-start">
+                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
+                  <FaClock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                  Flexible Schedule
+                </h3>
+                <p className="mt-2 text-gray-500 dark:text-gray-400">
+                  Book sessions at your convenience and learn at your own pace.
+                </p>
+              </div>
+
+              {/* Community Card */}
+              <div className="flex flex-col items-start">
+                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
+                  <FaUsers className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                  Join a Community
+                </h3>
+                <p className="mt-2 text-gray-500 dark:text-gray-400">
+                  Connect with fellow learners and build your professional network.
+                </p>
+              </div>
+
+              {/* Personalized Feedback Card */}
+              <div className="flex flex-col items-start">
+                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/20 p-2">
+                  <FaComments className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                  Personalized Feedback
+                </h3>
+                <p className="mt-2 text-gray-500 dark:text-gray-400">
+                  Receive detailed feedback on your code and continuous improvement suggestions.
+                </p>
+              </div>
             </div>
           </div>
         </div>

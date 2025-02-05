@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { compare } from "bcryptjs";
 import { DefaultSession, NextAuthOptions } from "next-auth";
 import NextAuth from "next-auth/next";
+import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 
@@ -17,11 +19,45 @@ declare module "next-auth" {
     provider?: string;
     role?: 'MENTOR' | 'MENTEE';
     id?: string;
+    hashedPassword?: string;
   }
 }
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email }
+        });
+
+        if (!user || !user.hashedPassword) {
+          return null;
+        }
+
+        const isPasswordValid = await compare(credentials.password, user.hashedPassword);
+
+        if (!isPasswordValid) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role as 'MENTOR' | 'MENTEE',
+        };
+      }
+    }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
@@ -42,9 +78,8 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!dbUser) {
-          // Get role from URL parameters
-          const searchParams = new URLSearchParams(account?.state as string);
-          const isMentor = searchParams.get('role') === 'mentor';
+          // Get role from state parameter
+          const isMentor = (account?.state as string)?.includes('role=mentor');
           
           // Create new user
           dbUser = await prisma.user.create({
@@ -58,7 +93,7 @@ export const authOptions: NextAuthOptions = {
           });
         }
 
-        // Add role and provider to user object
+        // Important: Add role and provider to user object
         user.role = dbUser.role as 'MENTOR' | 'MENTEE';
         user.id = dbUser.id;
         user.provider = account?.provider;
@@ -95,19 +130,23 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Handle OAuth callback URLs
+      // If the url is an OAuth callback URL
       if (url.includes('/api/auth/callback/')) {
         const params = new URLSearchParams(url.split('?')[1]);
-        const role = params.get('role');
+        const callbackUrl = params.get('callbackUrl');
         
-        if (role === 'mentor') {
-          return `${baseUrl}/become-mentor/get-started`;
+        if (callbackUrl) {
+          return callbackUrl.startsWith(baseUrl) ? callbackUrl : baseUrl;
         }
-        
-        return `${baseUrl}/dashboard/mentee`;
+        return baseUrl;
       }
       
-      // Handle direct navigation to protected pages
+      // If it's a relative URL
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // If it's the same origin
       if (url.startsWith(baseUrl)) {
         return url;
       }
