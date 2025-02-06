@@ -7,20 +7,21 @@ import { z } from 'zod';
 const profileSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
   company: z.string().optional(),
-  experience: z.number().min(1, 'Experience must be at least 1 year'),
+  experience: z.string().min(1, 'Experience is required'),
   expertise: z.array(z.string()),
   skills: z.array(z.string()),
   hourlyRate: z.number().min(1, 'Hourly rate must be at least 1'),
   languages: z.array(z.string()),
   bio: z.string().min(50, 'Bio must be at least 50 characters'),
-  github: z.string().url().optional(),
-  linkedin: z.string().url().optional(),
-  website: z.string().url().optional(),
+  github: z.string().url().optional().or(z.literal('')),
+  linkedin: z.string().url().optional().or(z.literal('')),
+  website: z.string().url().optional().or(z.literal('')),
 });
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('Session:', session)
 
     if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -36,6 +37,16 @@ export async function POST(req: Request) {
     }
 
     const data = await req.json();
+    console.log('Received data:', data)
+
+    // Validate the data against the schema
+    try {
+      profileSchema.parse(data);
+    } catch (error) {
+      console.error('Validation error:', error)
+      return new NextResponse('Invalid data format', { status: 400 });
+    }
+
     const {
       title,
       company,
@@ -105,7 +116,9 @@ export async function POST(req: Request) {
         },
       });
 
-      return NextResponse.json(mentorProfile);
+      console.log('Profile created successfully')
+
+      return NextResponse.json({ success: true, profile: mentorProfile });
     } catch (error) {
       console.error('[MENTOR_PROFILE_UPSERT]', error);
       return new NextResponse('Failed to create/update profile', { status: 500 });
