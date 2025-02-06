@@ -1,19 +1,20 @@
-import { compare } from 'bcryptjs';
-import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from './prisma';
-
-type UserRole = 'MENTOR' | 'MENTEE';
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { Role } from "@prisma/client";
+import { compare } from "bcryptjs";
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { db } from "./prisma";
 
 interface CustomUser {
   id: string;
   email: string | null;
   name: string | null;
-  role: UserRole;
+  role: "MENTOR" | "MENTEE";
   onboardingCompleted: boolean;
 }
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(db),
   session: {
     strategy: 'jwt',
   },
@@ -32,7 +33,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        const user = await db.user.findUnique({
           where: {
             email: credentials.email,
           },
@@ -89,7 +90,7 @@ export const authOptions: NextAuthOptions = {
         user: {
           ...session.user,
           id: token.id as string,
-          role: token.role as UserRole,
+          role: token.role as Role,
           onboardingCompleted: token.onboardingCompleted as boolean,
         },
       };

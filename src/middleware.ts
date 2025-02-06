@@ -15,7 +15,6 @@ export async function middleware(request: NextRequest) {
   if (!token && (path.startsWith('/dashboard') || path.startsWith('/become-mentor/'))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-
   // If logged in user tries to access auth pages
   if (token && (path === '/login' || path === '/register')) {
     const dashboardPath = token.role === 'MENTOR' ? '/dashboard/mentor' : '/dashboard/mentee';
@@ -24,6 +23,11 @@ export async function middleware(request: NextRequest) {
 
   // Role-based redirects for dashboard
   if (path.startsWith('/dashboard')) {
+    // Check if user is a mentor and hasn't completed onboarding
+    if (token?.role === 'MENTOR' && !token?.onboardingCompleted && !path.startsWith('/dashboard/onboarding')) {
+      return NextResponse.redirect(new URL('/become-mentor/get-started', request.url));
+    }
+
     if (token?.role === 'MENTOR' && path.startsWith('/dashboard/mentee')) {
       return NextResponse.redirect(new URL('/dashboard/mentor', request.url));
     }
