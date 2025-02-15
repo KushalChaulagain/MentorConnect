@@ -25,10 +25,16 @@ interface MentorProfile {
   };
 }
 
+interface Connection {
+  mentorId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+}
+
 export default function FindMentorsPage() {
   const { data: session } = useSession();
   const { toast } = useToast();
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [expertiseFilter, setExpertiseFilter] = useState<string>("all");
@@ -36,6 +42,7 @@ export default function FindMentorsPage() {
 
   useEffect(() => {
     fetchMentors();
+    fetchConnections();
   }, []);
 
   const fetchMentors = async () => {
@@ -56,6 +63,17 @@ export default function FindMentorsPage() {
     }
   };
 
+  const fetchConnections = async () => {
+    try {
+      const response = await fetch('/api/connections/mentee');
+      if (!response.ok) throw new Error('Failed to fetch connections');
+      const data = await response.json();
+      setConnections(data);
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+    }
+  };
+
   const sendConnectionRequest = async (mentorId: string) => {
     try {
       const response = await fetch('/api/connections/request', {
@@ -70,6 +88,9 @@ export default function FindMentorsPage() {
 
       if (!response.ok) throw new Error('Failed to send request');
 
+      // Add the new connection to the local state
+      setConnections(prev => [...prev, { mentorId, status: 'PENDING' }]);
+
       toast({
         title: "Success",
         description: "Connection request sent successfully!",
@@ -81,6 +102,49 @@ export default function FindMentorsPage() {
         description: "Failed to send connection request. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const getConnectionStatus = (mentorId: string) => {
+    return connections.find(c => c.mentorId === mentorId)?.status;
+  };
+
+  const getButtonConfig = (mentorId: string) => {
+    if (session?.user?.id === mentorId) {
+      return {
+        text: 'Your Profile',
+        disabled: true,
+        variant: 'outline' as const,
+      };
+    }
+
+    const status = getConnectionStatus(mentorId);
+    switch (status) {
+      case 'PENDING':
+        return {
+          text: 'Request Pending',
+          disabled: true,
+          variant: 'secondary' as const,
+        };
+      case 'ACCEPTED':
+        return {
+          text: 'Connected',
+          disabled: true,
+          variant: 'outline' as const,
+        };
+      case 'REJECTED':
+        return {
+          text: 'Request Rejected',
+          disabled: true,
+          variant: 'destructive' as const,
+        };
+      default:
+        return {
+          text: 'Connect',
+          disabled: false,
+          variant: 'default' as const,
+          onClick: () => sendConnectionRequest(mentorId),
+        };
     }
   };
 
@@ -176,12 +240,18 @@ export default function FindMentorsPage() {
                 <span className="text-lg font-semibold">
                   Rs. {mentor.hourlyRate}/hr
                 </span>
-                <Button 
-                  onClick={() => sendConnectionRequest(mentor.userId)}
-                  disabled={session?.user?.id === mentor.userId}
-                >
-                  {session?.user?.id === mentor.userId ? 'Your Profile' : 'Connect'}
-                </Button>
+                {(() => {
+                  const config = getButtonConfig(mentor.userId);
+                  return (
+                    <Button
+                      variant={config.variant}
+                      disabled={config.disabled}
+                      onClick={config.onClick}
+                    >
+                      {config.text}
+                    </Button>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>

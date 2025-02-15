@@ -1,5 +1,6 @@
 'use client';
 
+import { ConnectionNotifications } from "@/components/connection-notifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, DollarSign, Star, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -9,7 +10,8 @@ export default function MentorDashboard() {
   const { data: session } = useSession();
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto py-8 space-y-8">
+      <ConnectionNotifications />
       {/* Welcome Section */}
       <div className="relative p-8 rounded-lg bg-gradient-to-br from-indigo-900 to-purple-900">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f46e5,#0ea5e9)] opacity-20 rounded-lg"></div>
