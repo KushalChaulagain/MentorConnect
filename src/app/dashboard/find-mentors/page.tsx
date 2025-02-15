@@ -31,8 +31,8 @@ export default function FindMentorsPage() {
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expertiseFilter, setExpertiseFilter] = useState<string>("");
-  const [priceRange, setPriceRange] = useState<string>("");
+  const [expertiseFilter, setExpertiseFilter] = useState<string>("all");
+  const [priceRange, setPriceRange] = useState<string>("all");
 
   useEffect(() => {
     fetchMentors();
@@ -89,9 +89,9 @@ export default function FindMentorsPage() {
       mentor.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mentor.bio.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesExpertise = !expertiseFilter || mentor.expertise.includes(expertiseFilter);
+    const matchesExpertise = expertiseFilter === "all" || mentor.expertise.includes(expertiseFilter);
 
-    const matchesPriceRange = !priceRange || (
+    const matchesPriceRange = priceRange === "all" || (
       priceRange === "0-50" ? mentor.hourlyRate <= 50 :
       priceRange === "51-100" ? mentor.hourlyRate > 50 && mentor.hourlyRate <= 100 :
       priceRange === "101+" ? mentor.hourlyRate > 100 : true
@@ -120,12 +120,12 @@ export default function FindMentorsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Select onValueChange={setExpertiseFilter}>
+        <Select onValueChange={setExpertiseFilter} value={expertiseFilter || "all"}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Filter by expertise" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Expertise</SelectItem>
+            <SelectItem value="all">All Expertise</SelectItem>
             <SelectItem value="frontend">Frontend Development</SelectItem>
             <SelectItem value="backend">Backend Development</SelectItem>
             <SelectItem value="mobile">Mobile Development</SelectItem>
@@ -133,12 +133,12 @@ export default function FindMentorsPage() {
             <SelectItem value="ai">AI/ML</SelectItem>
           </SelectContent>
         </Select>
-        <Select onValueChange={setPriceRange}>
+        <Select onValueChange={setPriceRange} value={priceRange || "all"}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Price range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Any Price</SelectItem>
+            <SelectItem value="all">Any Price</SelectItem>
             <SelectItem value="0-50">Rs. 0-50/hr</SelectItem>
             <SelectItem value="51-100">Rs. 51-100/hr</SelectItem>
             <SelectItem value="101+">Rs. 101+/hr</SelectItem>
