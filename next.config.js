@@ -9,6 +9,7 @@ const nextConfig = {
       'images.unsplash.com',
       'lh3.googleusercontent.com', // For Google OAuth profile images
       'avatars.githubusercontent.com', // For GitHub profile images
+      'res.cloudinary.com', // For Cloudinary images
     ],
   },
 }

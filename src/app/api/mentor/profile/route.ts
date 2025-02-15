@@ -106,19 +106,31 @@ export async function POST(req: Request) {
         },
       });
 
-      // Update user's onboarding status
-      await db.user.update({
+      // Update user's role and onboarding status
+      const updatedUser = await db.user.update({
         where: {
           id: session.user.id,
         },
         data: {
+          role: 'MENTOR',
           onboardingCompleted: true,
         },
       });
 
       console.log('Profile created successfully')
 
-      return NextResponse.json({ success: true, profile: mentorProfile });
+      return NextResponse.json({ 
+        success: true, 
+        profile: mentorProfile,
+        user: {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          image: updatedUser.image,
+          role: updatedUser.role,
+          onboardingCompleted: updatedUser.onboardingCompleted
+        }
+      });
     } catch (error) {
       console.error('[MENTOR_PROFILE_UPSERT]', error);
       return new NextResponse('Failed to create/update profile', { status: 500 });
