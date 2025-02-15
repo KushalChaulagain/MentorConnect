@@ -108,20 +108,33 @@ export default function MessagesPage() {
   };
 
   const setupPusher = (connectionId: string) => {
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-    });
+    try {
+      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
-    const channel = pusher.subscribe(`chat-${connectionId}`);
-    
-    channel.bind('new-message', (message: Message) => {
-      setMessages(prev => [...prev, message]);
-    });
+      if (!pusherKey || !pusherCluster) {
+        console.error('Pusher configuration is missing. Please check your .env.local file.');
+        return () => {};
+      }
 
-    return () => {
-      channel.unbind_all();
-      channel.unsubscribe();
-    };
+      const pusher = new Pusher(pusherKey, {
+        cluster: pusherCluster,
+      });
+
+      const channel = pusher.subscribe(`chat-${connectionId}`);
+      
+      channel.bind('new-message', (message: Message) => {
+        setMessages(prev => [...prev, message]);
+      });
+
+      return () => {
+        channel.unbind_all();
+        channel.unsubscribe();
+      };
+    } catch (error) {
+      console.error('Error setting up Pusher:', error);
+      return () => {};
+    }
   };
 
   const sendMessage = async (e: React.FormEvent) => {
