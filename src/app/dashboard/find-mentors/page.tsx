@@ -1,273 +1,189 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/hooks/useAuth';
-import { UserRole } from '@/types';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { Search, Star } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
-interface Mentor {
+interface MentorProfile {
   id: string;
-  name: string;
+  userId: string;
   title: string;
-  company: string | null;
+  bio: string;
   expertise: string[];
   hourlyRate: number;
   rating: number;
-  totalReviews: number;
-  languages: string[];
-  skills: string[];
+  user: {
+    name: string;
+    image: string;
+  };
 }
 
 export default function FindMentorsPage() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
-  const [mentors, setMentors] = useState<Mentor[]>([]);
-  const [isLoadingMentors, setIsLoadingMentors] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  const { data: session } = useSession();
+  const { toast } = useToast();
+  const [mentors, setMentors] = useState<MentorProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expertiseFilter, setExpertiseFilter] = useState<string>("");
+  const [priceRange, setPriceRange] = useState<string>("");
 
   useEffect(() => {
-    if (!isLoading && user?.role === UserRole.MENTOR) {
-      router.push('/dashboard');
-    }
-  }, [user, isLoading, router]);
-
-  useEffect(() => {
-    const fetchMentors = async () => {
-      try {
-        const res = await fetch('/api/mentors?' + new URLSearchParams({
-          search: searchQuery,
-          languages: selectedLanguages.join(','),
-          skills: selectedSkills.join(','),
-          minPrice: priceRange[0].toString(),
-          maxPrice: priceRange[1].toString(),
-        }));
-        
-        if (!res.ok) throw new Error('Failed to fetch mentors');
-        
-        const data = await res.json();
-        setMentors(data);
-      } catch (error) {
-        console.error('Error fetching mentors:', error);
-      } finally {
-        setIsLoadingMentors(false);
-      }
-    };
-
     fetchMentors();
-  }, [searchQuery, selectedLanguages, selectedSkills, priceRange]);
+  }, []);
 
-  if (isLoading || isLoadingMentors) {
+  const fetchMentors = async () => {
+    try {
+      const response = await fetch('/api/mentors/list');
+      if (!response.ok) throw new Error('Failed to fetch mentors');
+      const data = await response.json();
+      setMentors(data);
+    } catch (error) {
+      console.error('Error fetching mentors:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load mentors. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendConnectionRequest = async (mentorId: string) => {
+    try {
+      const response = await fetch('/api/connections/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mentorId,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send request');
+
+      toast({
+        title: "Success",
+        description: "Connection request sent successfully!",
+      });
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send connection request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredMentors = mentors.filter(mentor => {
+    const matchesSearch = mentor.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mentor.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mentor.bio.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesExpertise = !expertiseFilter || mentor.expertise.includes(expertiseFilter);
+
+    const matchesPriceRange = !priceRange || (
+      priceRange === "0-50" ? mentor.hourlyRate <= 50 :
+      priceRange === "51-100" ? mentor.hourlyRate > 50 && mentor.hourlyRate <= 100 :
+      priceRange === "101+" ? mentor.hourlyRate > 100 : true
+    );
+
+    return matchesSearch && matchesExpertise && matchesPriceRange;
+  });
+
+  if (loading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="h-64 bg-gray-200 dark:bg-gray-700 rounded"
-            ></div>
-          ))}
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Find a Mentor
-        </h1>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Connect with experienced developers who can help you grow
-        </p>
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search mentors..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Select onValueChange={setExpertiseFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by expertise" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Expertise</SelectItem>
+            <SelectItem value="frontend">Frontend Development</SelectItem>
+            <SelectItem value="backend">Backend Development</SelectItem>
+            <SelectItem value="mobile">Mobile Development</SelectItem>
+            <SelectItem value="devops">DevOps</SelectItem>
+            <SelectItem value="ai">AI/ML</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select onValueChange={setPriceRange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Price range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Any Price</SelectItem>
+            <SelectItem value="0-50">Rs. 0-50/hr</SelectItem>
+            <SelectItem value="51-100">Rs. 51-100/hr</SelectItem>
+            <SelectItem value="101+">Rs. 101+/hr</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Search and Filters */}
-      <Card className="mb-8">
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            {/* Search */}
-            <div className="flex flex-col space-y-1.5">
-              <label
-                htmlFor="search"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Search Mentors
-              </label>
-              <Input
-                id="search"
-                placeholder="Search by name, skills, or expertise..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Languages Filter */}
-              <div className="flex flex-col space-y-1.5">
-                <label
-                  htmlFor="languages"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Programming Languages
-                </label>
-                <Select
-                  value={selectedLanguages.join(',')}
-                  onValueChange={(value: string) => setSelectedLanguages(value.split(',').filter(Boolean))}
-                >
-                  <SelectTrigger id="languages">
-                    <SelectValue placeholder="Select languages" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="javascript">JavaScript</SelectItem>
-                    <SelectItem value="python">Python</SelectItem>
-                    <SelectItem value="java">Java</SelectItem>
-                    <SelectItem value="csharp">C#</SelectItem>
-                    <SelectItem value="ruby">Ruby</SelectItem>
-                  </SelectContent>
-                </Select>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filteredMentors.map((mentor) => (
+          <Card key={mentor.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={mentor.user.image} alt={mentor.user.name} />
+                <AvatarFallback>{mentor.user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <CardTitle className="text-xl">{mentor.user.name}</CardTitle>
+                <p className="text-sm text-muted-foreground">{mentor.title}</p>
               </div>
-
-              {/* Skills Filter */}
-              <div className="flex flex-col space-y-1.5">
-                <label
-                  htmlFor="skills"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Skills
-                </label>
-                <Select
-                  value={selectedSkills.join(',')}
-                  onValueChange={(value: string) => setSelectedSkills(value.split(',').filter(Boolean))}
-                >
-                  <SelectTrigger id="skills">
-                    <SelectValue placeholder="Select skills" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="react">React</SelectItem>
-                    <SelectItem value="node">Node.js</SelectItem>
-                    <SelectItem value="django">Django</SelectItem>
-                    <SelectItem value="spring">Spring</SelectItem>
-                    <SelectItem value="docker">Docker</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Price Range Filter */}
-              <div className="flex flex-col space-y-1.5">
-                <label
-                  htmlFor="price"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Price Range (Rs/hr)
-                </label>
-                <Select
-                  value={`${priceRange[0]}-${priceRange[1]}`}
-                  onValueChange={(value: string) => {
-                    const [min, max] = value.split('-').map(Number);
-                    setPriceRange([min, max]);
-                  }}
-                >
-                  <SelectTrigger id="price">
-                    <SelectValue placeholder="Select price range" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0-1000">Rs. 0 - 1,000</SelectItem>
-                    <SelectItem value="1000-2500">Rs. 1,000 - 2,500</SelectItem>
-                    <SelectItem value="2500-5000">Rs. 2,500 - 5,000</SelectItem>
-                    <SelectItem value="5000-10000">Rs. 5,000 - 10,000</SelectItem>
-                    <SelectItem value="10000-999999">Rs. 10,000+</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Mentors Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mentors.map((mentor) => (
-          <Card key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all">
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(mentor.name)}`} />
-                  <AvatarFallback>{mentor.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-lg leading-none">{mentor.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {mentor.title}
-                    {mentor.company && ` at ${mentor.company}`}
-                  </p>
-                </div>
+              <div className="flex items-center">
+                <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                <span className="ml-1 text-sm">{mentor.rating.toFixed(1)}</span>
               </div>
             </CardHeader>
-            <CardContent className="pb-4">
-              <div className="flex items-center space-x-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <svg
-                    key={i}
-                    className={`h-4 w-4 ${
-                      i < mentor.rating
-                        ? 'text-yellow-400'
-                        : 'text-gray-300 dark:text-gray-600'
-                    }`}
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 15.585l-7.07 3.715 1.35-7.87L.36 7.24l7.89-1.15L10 0l2.75 6.09 7.89 1.15-5.92 4.19 1.35 7.87L10 15.585z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground line-clamp-3">{mentor.bio}</p>
+              <div className="flex flex-wrap gap-2">
+                {mentor.expertise.map((skill) => (
+                  <Badge key={skill} variant="secondary">
+                    {skill}
+                  </Badge>
                 ))}
-                <span className="text-sm text-muted-foreground ml-2">
-                  ({mentor.totalReviews})
-                </span>
-                <Badge variant="outline" className="ml-auto">
-                  Rs. {mentor.hourlyRate}/hr
-                </Badge>
               </div>
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-1">
-                  {mentor.languages.slice(0, 3).map((lang) => (
-                        <Badge key={lang} variant="outline" className="text-xs">
-                      {lang}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {mentor.skills.slice(0, 3).map((skill) => (
-                    <Badge key={skill} variant="outline" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-semibold">
+                  Rs. {mentor.hourlyRate}/hr
+                </span>
+                <Button 
+                  onClick={() => sendConnectionRequest(mentor.userId)}
+                  disabled={session?.user?.id === mentor.userId}
+                >
+                  {session?.user?.id === mentor.userId ? 'Your Profile' : 'Connect'}
+                </Button>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full" 
-                onClick={() => router.push(`/dashboard/mentors/${mentor.id}`)}
-              >
-                View Profile
-              </Button>
-            </CardFooter>
           </Card>
         ))}
       </div>
