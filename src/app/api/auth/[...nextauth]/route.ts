@@ -26,6 +26,15 @@ declare module "next-auth" {
   }
 }
 
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: Role;
+    provider?: string;
+    onboardingCompleted: boolean;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -115,11 +124,13 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.id = user.id;
         token.provider = user.provider;
+        token.onboardingCompleted = user.onboardingCompleted;
       }
 
       // Handle role updates during session
-      if (trigger === 'update' && session?.user?.role) {
+      if (trigger === 'update' && session?.user) {
         token.role = session.user.role;
+        token.onboardingCompleted = session.user.onboardingCompleted;
       }
 
       return token;
@@ -127,9 +138,10 @@ export const authOptions: NextAuthOptions = {
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as 'MENTOR' | 'MENTEE';
+        session.user.role = token.role as Role;
         session.user.id = token.id as string;
         session.user.provider = token.provider as string;
+        session.user.onboardingCompleted = token.onboardingCompleted as boolean;
       }
       return session;
     },

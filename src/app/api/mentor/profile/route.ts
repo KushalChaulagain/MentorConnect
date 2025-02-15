@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       });
 
       // Update user's role and onboarding status
-      await db.user.update({
+      const updatedUser = await db.user.update({
         where: {
           id: session.user.id,
         },
@@ -123,8 +123,12 @@ export async function POST(req: Request) {
         success: true, 
         profile: mentorProfile,
         user: {
-          role: 'MENTOR',
-          onboardingCompleted: true
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          image: updatedUser.image,
+          role: updatedUser.role,
+          onboardingCompleted: updatedUser.onboardingCompleted
         }
       });
     } catch (error) {

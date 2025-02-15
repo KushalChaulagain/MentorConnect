@@ -154,26 +154,23 @@ export default function MentorProfileSetup() {
           ...session,
           user: {
             ...session?.user,
-            role: data.user.role,
-            onboardingCompleted: data.user.onboardingCompleted,
+            ...data.user,
           },
         });
-        console.log('11. Session updated successfully');
-      } catch (sessionError) {
-        console.error('Session update error:', sessionError);
-      }
+        console.log('11. Session updated successfully with data:', data.user);
 
-      console.log('12. Attempting redirection...');
-      // Add a small delay to ensure session is updated
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      try {
-        await router.push('/dashboard/mentor');
-        console.log('13. Redirection successful');
-      } catch (routerError) {
-        console.error('Router push error:', routerError);
-        console.log('14. Falling back to window.location.href');
+        // Wait for session to be updated
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        console.log('12. Attempting redirection...');
         window.location.href = '/dashboard/mentor';
+      } catch (error) {
+        console.error('Session update error:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update session. Please try refreshing the page.",
+          variant: "destructive",
+        });
       }
       
     } catch (error) {
