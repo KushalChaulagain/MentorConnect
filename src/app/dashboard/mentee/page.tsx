@@ -1,155 +1,227 @@
 "use client"
 
-import { DashboardLayout } from "@/components/dashboard-layout"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardTitle } from "@/components/ui/card"
-import { Briefcase, ChevronRight, Code, MessageSquare } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/components/ui/use-toast"
+import { MessageSquare, Star, Video } from "lucide-react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { redirect } from "next/navigation"
+import { useEffect, useState } from "react"
+
+interface Connection {
+  id: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
+  mentor: {
+    id: string
+    name: string
+    image: string
+    mentorProfile: {
+      title: string
+      expertise: string[]
+      rating: number
+    }
+  }
+}
+
+interface TopMentor {
+  id: string
+  userId: string
+  title: string
+  expertise: string[]
+  rating: number
+  user: {
+    name: string
+    image: string
+  }
+}
 
 export default function MenteeDashboard() {
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      redirect("/login")
-    },
-  })
+  const { data: session } = useSession()
+  const { toast } = useToast()
+  const [connections, setConnections] = useState<Connection[]>([])
+  const [topMentors, setTopMentors] = useState<TopMentor[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Redirect if user is a mentor
-  if (session?.user?.role === "MENTOR") {
-    redirect("/dashboard/mentor")
+  useEffect(() => {
+    fetchConnections()
+    fetchTopMentors()
+  }, [])
+
+  const fetchConnections = async () => {
+    try {
+      const response = await fetch('/api/connections/mentee')
+      if (!response.ok) throw new Error('Failed to fetch connections')
+      const data = await response.json()
+      setConnections(data)
+    } catch (error) {
+      console.error('Error fetching connections:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load your connections.",
+        variant: "destructive",
+      })
+    }
   }
 
-  // Redirect if user is not a mentee
-  if (session?.user?.role !== "MENTEE") {
-    redirect("/dashboard/mentor")
+  const fetchTopMentors = async () => {
+    try {
+      const response = await fetch('/api/mentors/top')
+      if (!response.ok) throw new Error('Failed to fetch top mentors')
+      const data = await response.json()
+      setTopMentors(data)
+    } catch (error) {
+      console.error('Error fetching top mentors:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (status === "loading") {
+  if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-400"></div>
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
     )
   }
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-[#0B1121] text-white p-8 space-y-5">
-        {/* Header Section */}
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-white">Get Started</h1>
-          <p className="mt-2 text-gray-400">Welcome back, {session.user.name}</p>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Get live help */}
-          <Link href="/dashboard/find-mentors" className="group">
-            <Card className="bg-[#151D2D] border-none h-full transition-all duration-200 hover:bg-[#1A2333]">
-              <CardContent className="pt-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <MessageSquare className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <CardTitle>Get live help</CardTitle>
-                    <p className="text-sm text-gray-400">1:1 mentorship session</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-sm text-gray-400 group-hover:text-white transition-colors">
-                  Find a mentor
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Get freelance help */}
-          <Link href="/dashboard/freelance" className="group">
-            <Card className="bg-[#151D2D] border-none h-full transition-all duration-200 hover:bg-[#1A2333]">
-              <CardContent className="pt-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <Briefcase className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <CardTitle>Get freelance help</CardTitle>
-                    <p className="text-sm text-gray-400">Pay with escrow</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-sm text-gray-400 group-hover:text-white transition-colors">
-                  Post a job
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Get code reviewed */}
-          <Link href="/dashboard/code-review" className="group">
-            <Card className="bg-[#151D2D] border-none h-full transition-all duration-200 hover:bg-[#1A2333]">
-              <CardContent className="pt-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 bg-white/10 rounded-xl">
-                    <Code className="h-6 w-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <CardTitle>Get code reviewed</CardTitle>
-                    <p className="text-sm text-gray-400">Pay with escrow</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-sm text-gray-400 group-hover:text-white transition-colors">
-                  Request review
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-
-        {/* Find Mentors Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Find Mentors</h2>
-            <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-white/10" asChild>
-              <Link href="/dashboard/find-mentors" className="flex items-center">
-                View all
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Link href="/mentors/john-doe" className="group">
-              <Card className="bg-[#151D2D] border-none transition-all duration-200 hover:bg-[#1A2333]">
-                <CardContent className="pt-6">
-                  <div className="flex items-start space-x-4">
-                    <Avatar className="h-12 w-12 border-2 border-white/10">
-                      <AvatarImage src="https://ui-avatars.com/api/?name=John+Doe" />
-                      <AvatarFallback>JD</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-medium">John Doe</h3>
-                      <p className="text-sm text-gray-400">Senior Software Engineer</p>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm text-gray-400">Full-stack development, React, Node.js</p>
-                  <div className="mt-4 flex items-center text-sm text-gray-400 group-hover:text-white transition-colors">
-                    View profile
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="relative p-8 rounded-lg bg-gradient-to-br from-indigo-900 to-purple-900">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f46e5,#0ea5e9)] opacity-20 rounded-lg"></div>
+        <div className="relative">
+          <h1 className="text-3xl font-bold text-white">
+            Welcome back, {session?.user?.name?.split(' ')[0]}!
+          </h1>
+          <p className="mt-2 text-indigo-100">
+            Connect with expert mentors and accelerate your learning journey.
+          </p>
         </div>
       </div>
-    </DashboardLayout>
+
+      {/* Connected Mentors Section */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Your Mentors</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {connections.filter(c => c.status === 'ACCEPTED').map((connection) => (
+            <Card key={connection.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={connection.mentor.image} alt={connection.mentor.name} />
+                  <AvatarFallback>{connection.mentor.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <CardTitle className="text-xl">{connection.mentor.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {connection.mentor.mentorProfile.title}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                  <span className="ml-1 text-sm">
+                    {connection.mentor.mentorProfile.rating.toFixed(1)}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {connection.mentor.mentorProfile.expertise.map((skill) => (
+                    <Badge key={skill} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Message
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Video className="w-4 h-4 mr-2" />
+                    Schedule
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {connections.filter(c => c.status === 'ACCEPTED').length === 0 && (
+            <Card className="col-span-full p-6 text-center">
+              <p className="text-muted-foreground mb-4">
+                You haven't connected with any mentors yet.
+              </p>
+              <Link href="/dashboard/find-mentors">
+                <Button>Find Mentors</Button>
+              </Link>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Pending Requests Section */}
+      {connections.filter(c => c.status === 'PENDING').length > 0 && (
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Pending Requests</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {connections.filter(c => c.status === 'PENDING').map((connection) => (
+              <Card key={connection.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={connection.mentor.image} alt={connection.mentor.name} />
+                    <AvatarFallback>{connection.mentor.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <CardTitle className="text-xl">{connection.mentor.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {connection.mentor.mentorProfile.title}
+                    </p>
+                  </div>
+                  <Badge>Pending</Badge>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommended Mentors Section */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Recommended Mentors</h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {topMentors.slice(0, 3).map((mentor) => (
+            <Card key={mentor.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={mentor.user.image} alt={mentor.user.name} />
+                  <AvatarFallback>{mentor.user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <CardTitle className="text-xl">{mentor.user.name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{mentor.title}</p>
+                </div>
+                <div className="flex items-center">
+                  <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                  <span className="ml-1 text-sm">{mentor.rating.toFixed(1)}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {mentor.expertise.map((skill) => (
+                    <Badge key={skill} variant="secondary">
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+                <Link href="/dashboard/find-mentors">
+                  <Button className="w-full">View Profile</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 

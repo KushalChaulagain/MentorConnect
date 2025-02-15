@@ -51,12 +51,14 @@ model User {
   passwordResets   PasswordReset[]
 
   // Mentor specific fields
-  mentorProfile MentorProfile?
+  mentorProfile    MentorProfile?
+  mentorConnections Connection[] @relation("MentorConnections")
 
   // Mentee specific fields
-  mentorReviews MentorReview[] @relation("ReviewAuthor")
-  bookings      Booking[]
-  messages      Message[]
+  menteeConnections Connection[] @relation("MenteeConnections")
+  mentorReviews     MentorReview[] @relation("ReviewAuthor")
+  bookings          Booking[]
+  messages          Message[]
 }
 
 model MentorProfile {
@@ -139,6 +141,20 @@ model PasswordReset {
   createdAt DateTime @default(now())
 }
 
+model Connection {
+  id        String   @id @default(cuid())
+  mentorId  String
+  menteeId  String
+  status    ConnectionStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mentor    User     @relation("MentorConnections", fields: [mentorId], references: [id])
+  mentee    User     @relation("MenteeConnections", fields: [menteeId], references: [id])
+
+  @@unique([mentorId, menteeId])
+}
+
 enum Role {
   ADMIN
   MENTOR
@@ -150,4 +166,10 @@ enum BookingStatus {
   CONFIRMED
   COMPLETED
   CANCELLED
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 } 
