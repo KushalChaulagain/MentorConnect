@@ -118,18 +118,19 @@ model Booking {
 
   mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
   mentee          User          @relation(fields: [menteeId], references: [id], onDelete: Cascade)
-  messages        Message[]
 }
 
 model Message {
-  id         String   @id @default(cuid())
-  bookingId  String
-  senderId   String
-  content    String   @db.Text
-  createdAt  DateTime @default(now())
+  id            String   @id @default(cuid())
+  content       String   @db.Text
+  senderId      String
+  createdAt     DateTime @default(now())
+  connection    Connection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connectionId  String
+  sender        User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  @@index([connectionId])
+  @@index([senderId])
 }
 
 model PasswordReset {
@@ -151,6 +152,7 @@ model Connection {
 
   mentor    User     @relation("MentorConnections", fields: [mentorId], references: [id])
   mentee    User     @relation("MenteeConnections", fields: [menteeId], references: [id])
+  messages  Message[]
 
   @@unique([mentorId, menteeId])
 }

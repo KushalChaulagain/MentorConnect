@@ -3,7 +3,7 @@
 import { ModeToggle } from "@/components/mode-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Calendar, LayoutDashboard, MessageSquare, Settings, Star, Users } from "lucide-react";
+import { Calendar, LayoutDashboard, MessageSquare, Search, Settings, Star, Users } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const { data: session } = useSession();
   const pathname = usePathname();
 
-  const sidebarItems = [
+  const mentorSidebarItems = [
     {
       title: "Overview",
       href: "/dashboard/mentor",
@@ -48,6 +48,36 @@ export default function DashboardLayout({
       icon: Settings,
     },
   ];
+
+  const menteeSidebarItems = [
+    {
+      title: "Overview",
+      href: "/dashboard/mentee",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Messages",
+      href: "/dashboard/mentee/messages",
+      icon: MessageSquare,
+    },
+    {
+      title: "Find Mentors",
+      href: "/dashboard/find-mentors",
+      icon: Search,
+    },
+    {
+      title: "My Sessions",
+      href: "/dashboard/mentee/sessions",
+      icon: Calendar,
+    },
+    {
+      title: "Settings",
+      href: "/dashboard/mentee/settings",
+      icon: Settings,
+    },
+  ];
+
+  const sidebarItems = session?.user?.role === 'MENTOR' ? mentorSidebarItems : menteeSidebarItems;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

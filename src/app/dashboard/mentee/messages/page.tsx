@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { Phone, Search, Send, Video } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import Pusher from 'pusher-js';
 import { useEffect, useRef, useState } from "react";
 
@@ -15,7 +16,7 @@ interface Connection {
   mentorId: string;
   menteeId: string;
   status: string;
-  mentee: {
+  mentor: {
     id: string;
     name: string;
     image: string;
@@ -36,6 +37,7 @@ interface Message {
 export default function MessagesPage() {
   const { data: session } = useSession();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,6 +48,16 @@ export default function MessagesPage() {
   useEffect(() => {
     fetchConnections();
   }, []);
+
+  useEffect(() => {
+    const connectionId = searchParams.get('connectionId');
+    if (connectionId && connections.length > 0) {
+      const connection = connections.find(c => c.id === connectionId);
+      if (connection) {
+        setSelectedConnection(connection);
+      }
+    }
+  }, [connections, searchParams]);
 
   useEffect(() => {
     if (selectedConnection) {
@@ -175,12 +187,12 @@ export default function MessagesPage() {
                 >
                   <div className="flex items-center gap-4">
                     <Avatar>
-                      <AvatarImage src={connection.mentee.image} alt={connection.mentee.name} />
-                      <AvatarFallback>{connection.mentee.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={connection.mentor.image} alt={connection.mentor.name} />
+                      <AvatarFallback>{connection.mentor.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {connection.mentee.name}
+                        {connection.mentor.name}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         Click to start chatting
@@ -201,15 +213,15 @@ export default function MessagesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Avatar>
-                      <AvatarImage src={selectedConnection.mentee.image} alt={selectedConnection.mentee.name} />
-                      <AvatarFallback>{selectedConnection.mentee.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={selectedConnection.mentor.image} alt={selectedConnection.mentor.name} />
+                      <AvatarFallback>{selectedConnection.mentor.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {selectedConnection.mentee.name}
+                        {selectedConnection.mentor.name}
                       </h2>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Mentee
+                        Mentor
                       </p>
                     </div>
                   </div>

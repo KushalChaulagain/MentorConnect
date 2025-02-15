@@ -1,7 +1,15 @@
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import Pusher from 'pusher';
 import { authOptions } from '../../auth/[...nextauth]/route';
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+});
 
 export async function POST(request: Request) {
   try {
@@ -57,11 +65,18 @@ export async function POST(request: Request) {
         },
         mentee: {
           select: {
+            id: true,
             name: true,
-            email: true,
+            image: true,
           },
         },
       },
+    });
+
+    // Send notification to mentor
+    await pusher.trigger(`user-${mentorId}`, 'connection-request', {
+      ...connection,
+      message: `${session.user.name} wants to connect with you!`,
     });
 
     // TODO: Send notification to mentor about new connection request
