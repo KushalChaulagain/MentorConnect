@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Role } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { DefaultSession, NextAuthOptions } from "next-auth";
 import NextAuth from "next-auth/next";
@@ -10,16 +11,18 @@ declare module "next-auth" {
   interface Session {
     user: {
       provider?: string;
-      role?: 'MENTOR' | 'MENTEE';
-      id?: string;
+      role: Role;
+      id: string;
+      onboardingCompleted: boolean;
     } & DefaultSession["user"]
   }
 
   interface User {
     provider?: string;
-    role?: 'MENTOR' | 'MENTEE';
-    id?: string;
+    role: Role;
+    id: string;
     hashedPassword?: string;
+    onboardingCompleted: boolean;
   }
 }
 
@@ -55,6 +58,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role as 'MENTOR' | 'MENTEE',
+          onboardingCompleted: user.onboardingCompleted,
         };
       }
     }),
@@ -78,8 +82,9 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!dbUser) {
-          // Get role from state parameter
-          const isMentor = (account?.state as string)?.includes('role=mentor');
+          // Check if coming from become-mentor flow
+          const isMentor = account?.provider === 'google' && 
+            (account?.state as string)?.includes('role=mentor');
           
           // Create new user
           dbUser = await prisma.user.create({
@@ -87,7 +92,7 @@ export const authOptions: NextAuthOptions = {
               email: user.email,
               name: user.name,
               image: user.image,
-              role: isMentor ? 'MENTOR' : 'MENTEE',
+              role: isMentor ? 'MENTOR' : 'MENTEE', // Set role to MENTOR only if coming from mentor flow
               onboardingCompleted: false,
             },
           });

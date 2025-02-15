@@ -17,8 +17,16 @@ export async function middleware(request: NextRequest) {
   }
   // If logged in user tries to access auth pages
   if (token && (path === '/login' || path === '/register')) {
+    if (token.role === 'MENTOR' && !token.onboardingCompleted) {
+      return NextResponse.redirect(new URL('/become-mentor/get-started', request.url));
+    }
     const dashboardPath = token.role === 'MENTOR' ? '/dashboard/mentor' : '/dashboard/mentee';
     return NextResponse.redirect(new URL(dashboardPath, request.url));
+  }
+
+  // Redirect users without a role to role selection, except when coming from become-mentor
+  if (token && !token.role && !path.startsWith('/become-mentor')) {
+    return NextResponse.redirect(new URL('/role-selection', request.url));
   }
 
   // Role-based redirects for dashboard

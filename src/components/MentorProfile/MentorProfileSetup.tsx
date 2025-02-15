@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { Check, ChevronRight, Loader2 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 
@@ -64,9 +64,11 @@ const profileSchema = z.object({
 export default function MentorProfileSetup() {
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -84,58 +86,160 @@ export default function MentorProfileSetup() {
 
   const onSubmit = async (values: FormData) => {
     try {
-      setIsSubmitting(true)
-      console.log('Submitting form with values:', values)
+      console.log('1. Starting form submission...');
+      // Validate all required fields before submission
+      const isValid = await form.trigger();
+      if (!isValid) {
+        console.log('Form validation failed:', form.formState.errors);
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly.",
+          variant: "destructive",
+        });
+        return;
+      }
+      console.log('2. Form validation passed');
 
+      setIsSubmitting(true);
+      console.log('3. Preparing API request with values:', values);
+
+      const requestBody = {
+        title: values.jobTitle,
+        company: values.company,
+        bio: values.bio,
+        expertise: values.expertise,
+        languages: ["JavaScript"],
+        skills: values.expertise,
+        experience: `${values.yearsOfExperience} years`,
+        interests: [],
+        goals: [],
+        hourlyRate: 50,
+        github: "",
+        linkedin: values.linkedinUrl,
+        website: "",
+      };
+      console.log('4. Request body prepared:', requestBody);
+
+      console.log('5. Sending API request...');
       const response = await fetch("/api/mentor/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: values.jobTitle,
-          company: values.company,
-          bio: values.bio,
-          expertise: values.expertise,
-          languages: ["JavaScript"],
-          skills: values.expertise,
-          experience: `${values.yearsOfExperience} years`,
-          interests: [],
-          goals: [],
-          hourlyRate: 50,
-          github: "",
-          linkedin: values.linkedinUrl,
-          website: "",
-        }),
-      })
+        headers: { 
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-      const data = await response.json()
-      console.log('API Response:', data)
+      const data = await response.json();
+      console.log('6. API Response received:', data);
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Your mentor profile has been created successfully.",
-        })
-        
-        console.log('Profile created successfully, redirecting to dashboard...')
-
-        router.push('/dashboard/mentor')
-      } else {
-        throw new Error(data.message || "Failed to create profile")
+      if (!response.ok) {
+        console.log('7. API request failed:', response.status, response.statusText);
+        throw new Error(data.message || "Failed to create profile");
       }
+      console.log('7. API request successful');
+
+      // Mark the final step as complete
+      setStep(steps.length);
+      console.log('8. Final step marked as complete');
+      
+      toast({
+        title: "Success",
+        description: "Your mentor profile has been created successfully.",
+      });
+      console.log('9. Success toast shown');
+      
+      console.log('10. Updating session...');
+      try {
+        await update({
+          ...session,
+          user: {
+            ...session?.user,
+            role: data.user.role,
+            onboardingCompleted: data.user.onboardingCompleted,
+          },
+        });
+        console.log('11. Session updated successfully');
+      } catch (sessionError) {
+        console.error('Session update error:', sessionError);
+      }
+
+      console.log('12. Attempting redirection...');
+      // Add a small delay to ensure session is updated
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        await router.push('/dashboard/mentor');
+        console.log('13. Redirection successful');
+      } catch (routerError) {
+        console.error('Router push error:', routerError);
+        console.log('14. Falling back to window.location.href');
+        window.location.href = '/dashboard/mentor';
+      }
+      
     } catch (error) {
-      console.error('Profile creation error:', error)
+      console.error('Profile creation error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create profile. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, steps.length - 1))
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0))
+
+  // Update the progress steps rendering to handle completed state
+  const isStepComplete = (stepIndex: number) => {
+    if (isSubmitting && stepIndex === steps.length - 1) return true;
+    return step > stepIndex;
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      
+      // Update the session with the new image URL
+      await update({
+        ...session,
+        user: {
+          ...session?.user,
+          image: data.url,
+        },
+      });
+
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
@@ -147,12 +251,27 @@ export default function MentorProfileSetup() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">{session?.user?.name || "Guest"}</span>
-            <Avatar className="h-8 w-8 rounded-full border border-gray-700">
-              <AvatarImage src={session?.user?.image || "/placeholder.svg"} alt={session?.user?.name || "User"} />
-              <AvatarFallback className="bg-gray-800">
-                {session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "U"}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-10 w-10 rounded-full border border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                     onClick={() => fileInputRef.current?.click()}>
+                <AvatarImage src={session?.user?.image || "/placeholder.svg"} alt={session?.user?.name || "User"} />
+                <AvatarFallback className="bg-gray-800">
+                  {session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "U"}
+                </AvatarFallback>
+                {isUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </div>
+                )}
+              </Avatar>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleImageUpload}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -164,9 +283,10 @@ export default function MentorProfileSetup() {
           Become a Mentor
         </h1>
         <p className="text-gray-400 text-center max-w-xl mx-auto">
-          Share your expertise and help others grow while earning an average of $1,000 USD per month
+          Share your expertise and help others grow while earning an average of NPR 30,000 per month
         </p>
       </div>
+
 
       {/* Progress Steps */}
       <div className="flex justify-center mb-12">
@@ -176,17 +296,17 @@ export default function MentorProfileSetup() {
               <div
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
-                  step > i
+                  isStepComplete(i)
                     ? "bg-[#6366F1] border-[#6366F1] text-white"
                     : step === i
                       ? "border-[#6366F1] text-[#6366F1]"
                       : "border-gray-700 text-gray-500",
                 )}
               >
-                {step > i ? <Check className="w-5 h-5" /> : <span>{i + 1}</span>}
+                {isStepComplete(i) ? <Check className="w-5 h-5" /> : <span>{i + 1}</span>}
               </div>
               {i < steps.length - 1 && (
-                <div className={cn("w-16 h-0.5", step > i ? "bg-[#6366F1]" : "bg-gray-700")} />
+                <div className={cn("w-16 h-0.5", isStepComplete(i) ? "bg-[#6366F1]" : "bg-gray-700")} />
               )}
             </div>
           ))}
@@ -232,9 +352,6 @@ export default function MentorProfileSetup() {
                         <SelectContent className="bg-gray-800 border-gray-700">
                           <SelectItem value="kathmandu" className="text-white hover:bg-gray-700">
                             Kathmandu Valley
-                          </SelectItem>
-                          <SelectItem value="province1" className="text-white hover:bg-gray-700">
-                            Province 1
                           </SelectItem>
                           <SelectItem value="madhesh" className="text-white hover:bg-gray-700">
                             Madhesh Province
