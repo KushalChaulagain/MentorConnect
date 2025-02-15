@@ -2,11 +2,13 @@
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useRouter } from 'next/navigation';
 import { FaBrain, FaCalendar, FaClock, FaHandshake, FaLaptopCode, FaMoneyBillWave } from 'react-icons/fa';
 
 export default function BecomeMentorPage() {
-  const router = useRouter();
+  const handleBecomeMentor = () => {
+    console.log('Navigating to register page...');
+    window.location.href = '/register?role=mentor';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -26,7 +28,7 @@ export default function BecomeMentorPage() {
           <div className="mt-10">
             <Button 
               size="lg"
-              onClick={() => router.push('/register?role=mentor')}
+              onClick={handleBecomeMentor}
               className="bg-white text-indigo-600 hover:bg-gray-100 hover:text-indigo-700"
             >
               Become a Mentor Now
@@ -143,7 +145,7 @@ export default function BecomeMentorPage() {
             <div className="mt-8">
               <Button 
                 size="lg"
-                onClick={() => router.push('/register?role=mentor')}
+                onClick={handleBecomeMentor}
                 className="bg-indigo-600 text-white hover:bg-indigo-700"
               >
                 Apply Now
