@@ -134,10 +134,12 @@ export default function MenteeDashboard() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Message
-                  </Button>
+                  <Link href={`/dashboard/mentee/messages?connectionId=${connection.id}`} className="flex-1">
+                    <Button size="sm" variant="outline" className="w-full">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Message
+                    </Button>
+                  </Link>
                   <Button size="sm" variant="outline" className="flex-1">
                     <Video className="w-4 h-4 mr-2" />
                     Schedule

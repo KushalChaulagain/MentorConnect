@@ -45,8 +45,8 @@ export async function POST(req: Request) {
     const message = await prisma.message.create({
       data: {
         content,
-        connectionId,
         senderId: session.user.id,
+        connectionId: connectionId,
       },
       include: {
         sender: {

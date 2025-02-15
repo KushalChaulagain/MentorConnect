@@ -45,7 +45,7 @@ export async function GET() {
     });
 
     // Format the connections based on user role
-    const formattedConnections = connections.map(connection => {
+    const formattedConnections = connections.map((connection: any) => {
       if (session.user.id === connection.mentorId) {
         return {
           ...connection,

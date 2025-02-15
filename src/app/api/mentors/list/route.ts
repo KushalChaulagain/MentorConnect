@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 
     // Calculate average rating for each mentor
     const mentorsWithRating = await Promise.all(
-      mentors.map(async (mentor) => {
+      mentors.map(async (mentor: any) => {
         const reviews = await prisma.mentorReview.findMany({
           where: {
             mentorProfileId: mentor.id,

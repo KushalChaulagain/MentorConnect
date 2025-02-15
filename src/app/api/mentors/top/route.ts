@@ -39,9 +39,9 @@ export async function GET(request: Request) {
     });
 
     // Calculate average rating for each mentor
-    const mentorsWithRating = mentors.map((mentor) => {
+    const mentorsWithRating = mentors.map((mentor: any) => {
       const rating = mentor.reviews.length > 0
-        ? mentor.reviews.reduce((acc, review) => acc + review.rating, 0) / mentor.reviews.length
+        ? mentor.reviews.reduce((acc: any, review: any) => acc + review.rating, 0) / mentor.reviews.length
         : 0;
 
       return {
