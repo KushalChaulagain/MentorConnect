@@ -51,17 +51,15 @@ export function ConnectionNotifications() {
 
   const setupPusher = () => {
     try {
-      // Check if environment variables are available
-      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
-      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
 
-      if (!pusherKey || !pusherCluster) {
+      if (!pusherKey) {
         console.error('Pusher configuration is missing');
         return () => {};
       }
 
       const pusher = new Pusher(pusherKey, {
-        cluster: pusherCluster,
+        cluster: 'ap2',
       });
 
       if (!session?.user?.id) {
