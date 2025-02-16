@@ -62,7 +62,10 @@ export default function MessagesPage() {
   useEffect(() => {
     if (selectedConnection) {
       fetchMessages(selectedConnection.id);
-      setupPusher(selectedConnection.id);
+      const cleanup = setupPusher(selectedConnection.id);
+      return () => {
+        cleanup();
+      };
     }
   }, [selectedConnection]);
 
@@ -107,40 +110,27 @@ export default function MessagesPage() {
     }
   };
 
-  const setupPusher = (connectionId: string) => {
-    try {
-      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
-
-      if (!pusherKey) {
-        console.error('Pusher configuration is missing. Please check your .env.local file.');
-        return () => {};
-      }
-
-      const pusher = new Pusher(pusherKey, {
-        cluster: 'ap2',
-      });
-
-      const channel = pusher.subscribe(`chat-${connectionId}`);
-      
-      channel.bind('new-message', (message: Message) => {
-        setMessages(prev => [...prev, message]);
-      });
-
-      return () => {
-        channel.unbind_all();
-        channel.unsubscribe();
-      };
-    } catch (error) {
-      console.error('Error setting up Pusher:', error);
-      return () => {};
-    }
-  };
-
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedConnection || !newMessage.trim()) return;
 
     try {
+      // Optimistically add the message to the UI
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content: newMessage,
+        senderId: session?.user?.id!,
+        createdAt: new Date().toISOString(),
+        sender: {
+          name: session?.user?.name!,
+          image: session?.user?.image!,
+        },
+      };
+
+      setMessages(prev => [...prev, optimisticMessage]);
+      setNewMessage("");
+      scrollToBottom();
+
       const response = await fetch('/api/messages/send', {
         method: 'POST',
         headers: {
@@ -152,16 +142,136 @@ export default function MessagesPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to send message');
+      if (!response.ok) {
+        // Remove the optimistic message if the request failed
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+        throw new Error('Failed to send message');
+      }
 
-      setNewMessage("");
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Error from server:', data.error);
+        toast({
+          title: "Warning",
+          description: "Message sent but real-time updates may be delayed",
+          variant: "destructive",
+        });
+      }
+
+      // Replace the optimistic message with the real one
+      setMessages(prev => 
+        prev.map(msg => msg.id === optimisticMessage.id ? data.message || data : msg)
+      );
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const setupPusher = (connectionId: string) => {
+    try {
+      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+      if (!pusherKey || !pusherCluster) {
+        console.error('Missing Pusher configuration:', { pusherKey, pusherCluster });
+        toast({
+          title: "Configuration Error",
+          description: "Real-time updates are not available. Please refresh the page.",
+          variant: "destructive",
+        });
+        return () => {};
+      }
+
+      console.log('Initializing Pusher with:', {
+        key: pusherKey,
+        cluster: pusherCluster,
+        channel: `chat-${connectionId}`
+      });
+
+      // Initialize Pusher with explicit configuration
+      const pusher = new Pusher(pusherKey, {
+        cluster: pusherCluster,
+        forceTLS: true,
+        enabledTransports: ['ws', 'wss', 'xhr_streaming', 'xhr_polling'],
+        disabledTransports: [],
+        wsHost: `ws-${pusherCluster}.pusher.com`,
+        httpHost: `sockjs-${pusherCluster}.pusher.com`,
+      });
+
+      // Log the full Pusher configuration for debugging
+      console.log('Full Pusher configuration:', {
+        key: pusherKey,
+        cluster: pusherCluster,
+        wsHost: `ws-${pusherCluster}.pusher.com`,
+        httpHost: `sockjs-${pusherCluster}.pusher.com`,
+      });
+
+      const channel = pusher.subscribe(`chat-${connectionId}`);
+      
+      channel.bind('new-message', (data: Message) => {
+        console.log('Received new message:', data);
+        
+        // Only add the message if it's from another user
+        if (data.senderId !== session?.user?.id) {
+          setMessages(prev => {
+            // Check if message already exists
+            const messageExists = prev.some(m => m.id === data.id);
+            if (messageExists) {
+              console.log('Message already exists, skipping:', data.id);
+              return prev;
+            }
+            console.log('Adding new message to state:', data.id);
+            return [...prev, data];
+          });
+          scrollToBottom();
+        }
+      });
+
+      // Monitor connection state
+      pusher.connection.bind('state_change', (states: any) => {
+        console.log('Pusher connection state changed:', {
+          previous: states.previous,
+          current: states.current
+        });
+
+        if (states.current === 'connected') {
+          console.log('Successfully connected to Pusher');
+          toast({
+            title: "Connected",
+            description: "Real-time messaging is active",
+          });
+        }
+      });
+
+      pusher.connection.bind('error', (err: any) => {
+        console.error('Pusher connection error:', err);
+        toast({
+          title: "Connection Error",
+          description: "Real-time updates may be delayed. Messages will still be sent.",
+          variant: "destructive",
+        });
+      });
+
+      return () => {
+        console.log('Cleaning up Pusher connection');
+        channel.unbind_all();
+        pusher.unsubscribe(`chat-${connectionId}`);
+        pusher.disconnect();
+      };
+    } catch (error) {
+      console.error('Error setting up Pusher:', error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to initialize real-time updates",
+        variant: "destructive",
+      });
+      return () => {};
     }
   };
 

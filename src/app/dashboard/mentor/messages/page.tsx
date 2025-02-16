@@ -98,14 +98,84 @@ export default function MessagesPage() {
   const setupPusher = (connectionId: string) => {
     try {
       const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
-      if (!pusherKey) {
+      if (!pusherKey || !pusherCluster) {
         console.error('Pusher configuration is missing. Please check your .env.local file.');
         return () => {};
       }
 
       const pusher = new Pusher(pusherKey, {
-        cluster: 'ap2',
+        cluster: pusherCluster,
+        forceTLS: true,
+        enabledTransports: ['ws', 'wss'],
+      });
+
+      // Add connection monitoring
+      let connectionAttempts = 0;
+      const maxConnectionAttempts = 5;
+
+      pusher.connection.bind('state_change', (states: any) => {
+        const currentState = states.current;
+        console.log('Pusher connection state changed:', currentState, {
+          key: pusherKey,
+          cluster: pusherCluster
+        });
+        
+        if (currentState === 'connected') {
+          console.log('Successfully connected to Pusher');
+          connectionAttempts = 0; // Reset attempts on successful connection
+          toast({
+            title: "Connected",
+            description: "Real-time messaging is now active",
+          });
+        }
+        if (currentState === 'disconnected' || currentState === 'failed') {
+          connectionAttempts++;
+          console.log(`Attempting to reconnect... (Attempt ${connectionAttempts}/${maxConnectionAttempts})`, {
+            key: pusherKey,
+            cluster: pusherCluster
+          });
+          
+          if (connectionAttempts < maxConnectionAttempts) {
+            setTimeout(() => {
+              console.log('Reconnecting with config:', {
+                key: pusherKey,
+                cluster: pusherCluster
+              });
+              pusher.connect();
+            }, 3000);
+          } else {
+            console.error('Max reconnection attempts reached', {
+              key: pusherKey,
+              cluster: pusherCluster
+            });
+            toast({
+              title: "Connection Failed",
+              description: "Unable to establish real-time connection. Please refresh the page.",
+              variant: "destructive",
+            });
+          }
+        }
+      });
+
+      pusher.connection.bind('error', (err: any) => {
+        console.error('Pusher connection error:', {
+          error: err,
+          config: {
+            key: pusherKey,
+            cluster: pusherCluster
+          }
+        });
+        
+        // Only show toast and attempt reconnect if under max attempts
+        if (connectionAttempts < maxConnectionAttempts) {
+          toast({
+            title: "Connection Error",
+            description: "Attempting to reconnect...",
+            variant: "destructive",
+          });
+        }
       });
 
       const channel = pusher.subscribe(`chat-${connectionId}`);
