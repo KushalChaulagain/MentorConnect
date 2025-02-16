@@ -59,6 +59,8 @@ model User {
   mentorReviews     MentorReview[] @relation("ReviewAuthor")
   bookings          Booking[]
   messages          Message[]
+  notifications     Notification[] @relation("UserNotifications")
+  sentNotifications Notification[] @relation("NotificationSender")
 }
 
 model MentorProfile {
@@ -155,6 +157,23 @@ model Connection {
   messages  Message[]
 
   @@unique([mentorId, menteeId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // 'message' or 'connection'
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  userId    String
+  senderId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  sender    User     @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([senderId])
 }
 
 enum Role {

@@ -1,6 +1,7 @@
 'use client';
 
 import { ModeToggle } from "@/components/mode-toggle";
+import { Notifications } from "@/components/notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Calendar, LayoutDashboard, MessageSquare, Search, Settings, Star, Users } from "lucide-react";
@@ -121,6 +122,7 @@ export default function DashboardLayout({
             <div className="flex items-center justify-end px-6 h-full">
               <div className="flex items-center gap-4">
                 <ModeToggle />
+                <Notifications />
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {session?.user?.name}
