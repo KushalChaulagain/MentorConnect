@@ -98,15 +98,14 @@ export default function MessagesPage() {
   const setupPusher = (connectionId: string) => {
     try {
       const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
-      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
 
-      if (!pusherKey || !pusherCluster) {
+      if (!pusherKey) {
         console.error('Pusher configuration is missing. Please check your .env.local file.');
         return () => {};
       }
 
       const pusher = new Pusher(pusherKey, {
-        cluster: pusherCluster,
+        cluster: 'ap2',
       });
 
       const channel = pusher.subscribe(`chat-${connectionId}`);
