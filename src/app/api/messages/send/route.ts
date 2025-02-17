@@ -86,10 +86,31 @@ export async function POST(req: Request) {
             image: true,
           },
         },
+        connection: {
+          select: {
+            mentorId: true,
+            menteeId: true,
+          },
+        },
       },
     });
 
     console.log('Message created successfully:', message.id);
+
+    // Create notification for the recipient
+    const recipientId = message.connection.mentorId === session.user.id 
+      ? message.connection.menteeId 
+      : message.connection.mentorId;
+
+    await prisma.notification.create({
+      data: {
+        type: 'message',
+        title: 'New Message',
+        message: message.content,
+        userId: recipientId,
+        senderId: session.user.id,
+      },
+    });
 
     try {
       const channelName = `chat-${connectionId}`;
@@ -104,8 +125,13 @@ export async function POST(req: Request) {
         createdAt: message.createdAt.toISOString(),
       };
 
-      await pusher.trigger(channelName, 'new-message', eventData);
-      console.log('Pusher event triggered successfully');
+      // Trigger Pusher events for both chat and user channels
+      await Promise.all([
+        pusher.trigger(channelName, 'new-message', eventData),
+        pusher.trigger(`user-${recipientId}`, 'new-message', eventData)
+      ]);
+      
+      console.log('Pusher events triggered successfully');
 
       return NextResponse.json(message);
     } catch (pusherError) {

@@ -57,12 +57,6 @@ export async function POST(request: Request) {
         status: 'PENDING',
       },
       include: {
-        mentor: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
         mentee: {
           select: {
             id: true,
@@ -73,16 +67,34 @@ export async function POST(request: Request) {
       },
     });
 
-    // Send notification to mentor
-    await pusher.trigger(`user-${mentorId}`, 'connection-request', {
-      ...connection,
-      message: `${session.user.name} wants to connect with you!`,
+    // Create notification for the mentor
+    await prisma.notification.create({
+      data: {
+        type: 'connection',
+        title: 'Connection Request',
+        message: `${session.user.name} wants to connect with you!`,
+        userId: mentorId,
+        senderId: session.user.id,
+      },
     });
 
-    // TODO: Send notification to mentor about new connection request
-    // This could be implemented using email notifications or real-time notifications
+    try {
+      // Trigger Pusher event for the mentor
+      await pusher.trigger(
+        `user-${mentorId}`,
+        'connection-request',
+        {
+          ...connection,
+          createdAt: connection.createdAt.toISOString(),
+        }
+      );
 
-    return NextResponse.json(connection);
+      return NextResponse.json(connection);
+    } catch (error) {
+      console.error('Error triggering Pusher event:', error);
+      // Still return success since the connection was created
+      return NextResponse.json(connection);
+    }
   } catch (error) {
     console.error('[CONNECTION_REQUEST]', error);
     return new NextResponse('Internal error', { status: 500 });

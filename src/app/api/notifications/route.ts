@@ -6,7 +6,8 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+
+    if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -20,6 +21,7 @@ export async function GET() {
       include: {
         sender: {
           select: {
+            id: true,
             name: true,
             image: true,
           },
@@ -30,7 +32,7 @@ export async function GET() {
 
     return NextResponse.json(notifications);
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error('[NOTIFICATIONS_GET]', error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 } 
