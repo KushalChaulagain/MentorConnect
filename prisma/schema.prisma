@@ -60,7 +60,7 @@ model User {
   bookings          Booking[]
   messages          Message[]
   notifications     Notification[] @relation("UserNotifications")
-  sentNotifications Notification[] @relation("NotificationSender")
+  sentNotifications Notification[] @relation("SentNotifications")
 }
 
 model MentorProfile {
@@ -168,9 +168,10 @@ model Notification {
   userId    String
   senderId  String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
-  sender    User     @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  user   User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  sender User @relation("SentNotifications", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([senderId])
