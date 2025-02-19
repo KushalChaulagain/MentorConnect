@@ -1,5 +1,6 @@
 'use client';
 
+import { CallDialog } from "@/components/call/CallDialog";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Notifications } from "@/components/notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +9,8 @@ import { Calendar, LayoutDashboard, MessageSquare, Search, Settings, Star, Users
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Pusher from 'pusher-js';
+import { useEffect, useState } from "react";
 
 export default function DashboardLayout({
   children,
@@ -16,6 +19,43 @@ export default function DashboardLayout({
 }) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [incomingCall, setIncomingCall] = useState<{
+    channelName: string;
+    isVideo: boolean;
+    caller: {
+      name: string;
+      image: string;
+    };
+  } | null>(null);
+  const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+      if (!pusherKey || !pusherCluster) {
+        console.error('Pusher configuration is missing');
+        return;
+      }
+
+      const pusher = new Pusher(pusherKey, {
+        cluster: pusherCluster,
+      });
+
+      const channel = pusher.subscribe(`user-${session.user.id}`);
+      
+      channel.bind('incoming-call', (data: any) => {
+        setIncomingCall(data);
+        setIsCallDialogOpen(true);
+      });
+
+      return () => {
+        channel.unbind_all();
+        pusher.unsubscribe(`user-${session.user.id}`);
+      };
+    }
+  }, [session?.user?.id]);
 
   const mentorSidebarItems = [
     {
@@ -140,6 +180,22 @@ export default function DashboardLayout({
           <main className="py-6 px-4 sm:px-6 md:px-8">{children}</main>
         </div>
       </div>
+
+      {/* Global Call Dialog */}
+      {incomingCall && (
+        <CallDialog
+          isOpen={isCallDialogOpen}
+          onClose={() => {
+            setIsCallDialogOpen(false);
+            setIncomingCall(null);
+          }}
+          channelName={incomingCall.channelName}
+          isVideo={incomingCall.isVideo}
+          callerName={incomingCall.caller.name}
+          callerImage={incomingCall.caller.image}
+          isIncoming={true}
+        />
+      )}
     </div>
   );
 } 
