@@ -1,5 +1,6 @@
 'use client';
 
+import { CallDialog } from "@/components/call/CallDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,16 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
+  const [isVideoCall, setIsVideoCall] = useState(false);
+  const [incomingCall, setIncomingCall] = useState<{
+    channelName: string;
+    isVideo: boolean;
+    caller: {
+      name: string;
+      image: string;
+    };
+  } | null>(null);
 
   useEffect(() => {
     fetchConnections();
@@ -72,6 +83,31 @@ export default function MessagesPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      const pusherKey = process.env.NEXT_PUBLIC_PUSHER_APP_KEY;
+      const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+      if (!pusherKey || !pusherCluster) return;
+
+      const pusher = new Pusher(pusherKey, {
+        cluster: pusherCluster,
+      });
+
+      const channel = pusher.subscribe(`user-${session.user.id}`);
+      
+      channel.bind('incoming-call', (data: any) => {
+        setIncomingCall(data);
+        setIsCallDialogOpen(true);
+      });
+
+      return () => {
+        channel.unbind_all();
+        pusher.unsubscribe(`user-${session.user.id}`);
+      };
+    }
+  }, [session?.user?.id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -275,6 +311,38 @@ export default function MessagesPage() {
     }
   };
 
+  const startCall = async (isVideo: boolean) => {
+    if (!selectedConnection) return;
+
+    try {
+      const response = await fetch('/api/call/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientId: selectedConnection.mentor.id,
+          channelName: selectedConnection.id,
+          isVideo,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate call');
+      }
+
+      setIsVideoCall(isVideo);
+      setIsCallDialogOpen(true);
+    } catch (error) {
+      console.error('Error starting call:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start call. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-6rem)]">
@@ -348,10 +416,18 @@ export default function MessagesPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="icon">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => startCall(false)}
+                    >
                       <Phone className="h-5 w-5" />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => startCall(true)}
+                    >
                       <Video className="h-5 w-5" />
                     </Button>
                   </div>
@@ -413,6 +489,20 @@ export default function MessagesPage() {
           )}
         </Card>
       </div>
+      {selectedConnection && (
+        <CallDialog
+          isOpen={isCallDialogOpen}
+          onClose={() => {
+            setIsCallDialogOpen(false);
+            setIncomingCall(null);
+          }}
+          channelName={incomingCall?.channelName || selectedConnection.id}
+          isVideo={incomingCall?.isVideo || isVideoCall}
+          callerName={incomingCall?.caller?.name || selectedConnection.mentor.name}
+          callerImage={incomingCall?.caller?.image || selectedConnection.mentor.image}
+          isIncoming={!!incomingCall}
+        />
+      )}
     </div>
   );
 } 
