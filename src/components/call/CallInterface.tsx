@@ -1,14 +1,16 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import AgoraRTC, {
     IAgoraRTCClient,
     IAgoraRTCRemoteUser,
     ICameraVideoTrack,
     IMicrophoneAudioTrack,
+    IScreenVideoTrack,
 } from 'agora-rtc-sdk-ng';
 import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface CallInterfaceProps {
   channelName: string;
@@ -22,6 +24,7 @@ const client: IAgoraRTCClient = AgoraRTC.createClient({
 });
 
 export function CallInterface({ channelName, isVideo, onEndCall }: CallInterfaceProps) {
+  const { toast } = useToast();
   const [localTracks, setLocalTracks] = useState<{
     audioTrack?: IMicrophoneAudioTrack;
     videoTrack?: ICameraVideoTrack;
@@ -30,77 +33,234 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [screenTrack, setScreenTrack] = useState<any>(null);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const screenTrackRef = useRef<IScreenVideoTrack | null>(null);
+  const isComponentMounted = useRef(true);
+  const initAttempts = useRef(0);
+  const maxAttempts = 3;
+  const initializationInProgress = useRef(false);
 
   useEffect(() => {
-    const initCall = async () => {
-      try {
-        // Get Agora token from your API
-        const response = await fetch('/api/agora/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channelName }),
-        });
-        
-        if (!response.ok) throw new Error('Failed to get token');
-        const { token } = await response.json();
+    isComponentMounted.current = true;
+    return () => {
+      isComponentMounted.current = false;
+      handleCleanup();
+    };
+  }, []);
 
-        // Join the channel
-        await client.join(
-          process.env.NEXT_PUBLIC_AGORA_APP_ID!,
-          channelName,
-          token,
-          null
-        );
+  const handleCleanup = async () => {
+    console.log('Starting cleanup...');
+    try {
+      // First, leave the channel if connected
+      if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
+        console.log('Leaving channel...');
+        await client.leave();
+      }
 
-        // Create and publish tracks
-        const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
-        const [audioTrack, videoTrack] = tracks;
+      // Then clean up local tracks
+      if (localTracks.audioTrack) {
+        console.log('Cleaning up audio track...');
+        await localTracks.audioTrack.setEnabled(false);
+        await localTracks.audioTrack.stop();
+        await localTracks.audioTrack.close();
+      }
+      
+      if (localTracks.videoTrack) {
+        console.log('Cleaning up video track...');
+        await localTracks.videoTrack.setEnabled(false);
+        await localTracks.videoTrack.stop();
+        await localTracks.videoTrack.close();
+      }
+      
+      if (screenTrackRef.current) {
+        console.log('Cleaning up screen track...');
+        await screenTrackRef.current.setEnabled(false);
+        await screenTrackRef.current.stop();
+        await screenTrackRef.current.close();
+        screenTrackRef.current = null;
+      }
 
-        if (isVideo) {
-          await client.publish([audioTrack, videoTrack]);
-          setLocalTracks({ audioTrack, videoTrack });
-        } else {
-          await client.publish([audioTrack]);
-          setLocalTracks({ audioTrack });
+      // Reset states if component is still mounted
+      if (isComponentMounted.current) {
+        setLocalTracks({});
+        setRemoteUsers([]);
+        setIsScreenSharing(false);
+        setIsAudioMuted(false);
+        setIsVideoMuted(false);
+      }
+
+      console.log('Cleanup completed successfully');
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    }
+  };
+
+  const initializeCall = async () => {
+    if (initializationInProgress.current) {
+      console.log('Initialization already in progress, skipping...');
+      return;
+    }
+
+    try {
+      initializationInProgress.current = true;
+      setIsConnecting(true);
+      console.log('Initializing call...', { channelName, isVideo, attempt: initAttempts.current + 1 });
+
+      // First, ensure we're cleaned up
+      await handleCleanup();
+
+      if (!isComponentMounted.current) {
+        console.log('Component unmounted during initialization, aborting...');
+        return;
+      }
+
+      // Get Agora token
+      const response = await fetch('/api/agora/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelName }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to get token');
+      const { token } = await response.json();
+
+      if (!isComponentMounted.current) return;
+
+      // Join the channel
+      console.log('Joining channel...');
+      await client.join(
+        process.env.NEXT_PUBLIC_AGORA_APP_ID!,
+        channelName,
+        token,
+        null
+      );
+
+      if (!isComponentMounted.current) {
+        await client.leave();
+        return;
+      }
+
+      // Create and publish tracks
+      if (isVideo) {
+        console.log('Creating audio and video tracks...');
+        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+
+        if (!isComponentMounted.current) {
+          await audioTrack.stop();
+          await audioTrack.close();
+          await videoTrack.stop();
+          await videoTrack.close();
+          await client.leave();
+          return;
         }
 
-        // Listen for remote users
-        client.on('user-published', async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          
-          if (mediaType === 'video') {
-            setRemoteUsers(prev => [...prev, user]);
-          }
-          if (mediaType === 'audio') {
-            user.audioTrack?.play();
-          }
-        });
+        await client.publish([audioTrack, videoTrack]);
+        setLocalTracks({ audioTrack, videoTrack });
+        videoTrack.play('local-video');
+      } else {
+        console.log('Creating audio track...');
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
 
-        client.on('user-unpublished', (user, mediaType) => {
-          if (mediaType === 'video') {
-            setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-          }
-          if (mediaType === 'audio') {
-            user.audioTrack?.stop();
-          }
-        });
+        if (!isComponentMounted.current) {
+          await audioTrack.stop();
+          await audioTrack.close();
+          await client.leave();
+          return;
+        }
 
-        client.on('user-left', (user) => {
-          setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
-        });
-      } catch (error) {
-        console.error('Error initializing call:', error);
+        await client.publish([audioTrack]);
+        setLocalTracks({ audioTrack });
       }
-    };
 
-    initCall();
+      if (isComponentMounted.current) {
+        setIsConnecting(false);
+        toast({
+          title: "Connected to Call",
+          description: "Your media has been initialized successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error initializing call:', error);
+      
+      // Clean up any partial initialization
+      await handleCleanup();
+      
+      // Attempt retry if under max attempts
+      if (initAttempts.current < maxAttempts && isComponentMounted.current) {
+        initAttempts.current++;
+        console.log(`Retrying initialization (${initAttempts.current}/${maxAttempts})...`);
+        setTimeout(initializeCall, 2000);
+      } else if (isComponentMounted.current) {
+        toast({
+          title: "Connection Failed",
+          description: "Failed to initialize call. Please try again.",
+          variant: "destructive",
+        });
+        onEndCall();
+      }
+    } finally {
+      initializationInProgress.current = false;
+    }
+  };
+
+  useEffect(() => {
+    // Set up event listeners
+    client.on('user-published', async (user, mediaType) => {
+      if (!isComponentMounted.current) return;
+      
+      try {
+        await client.subscribe(user, mediaType);
+        
+        if (mediaType === 'video') {
+          setRemoteUsers(prev => [...prev, user]);
+        }
+        if (mediaType === 'audio') {
+          user.audioTrack?.play();
+        }
+      } catch (error) {
+        console.error('Error subscribing to remote user:', error);
+      }
+    });
+
+    client.on('user-unpublished', (user, mediaType) => {
+      if (!isComponentMounted.current) return;
+      
+      if (mediaType === 'video') {
+        setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+      }
+      if (mediaType === 'audio') {
+        user.audioTrack?.stop();
+      }
+    });
+
+    client.on('user-left', async (user) => {
+      if (!isComponentMounted.current) return;
+      
+      setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+      toast({
+        title: "User Left",
+        description: "The other participant has left the call",
+      });
+      await handleCleanup();
+      onEndCall();
+    });
+
+    client.on('connection-state-change', (curState, prevState) => {
+      console.log('Connection state changed:', prevState, '->', curState);
+      if (curState === 'DISCONNECTED' && isComponentMounted.current) {
+        if (prevState === 'CONNECTING' && initAttempts.current < maxAttempts) {
+          console.log('Disconnected while connecting, retrying...');
+          setTimeout(initializeCall, 2000);
+        }
+      }
+    });
+
+    // Initialize the call
+    initializeCall();
 
     return () => {
-      Object.values(localTracks).forEach(track => track?.stop());
-      Object.values(localTracks).forEach(track => track?.close());
       client.removeAllListeners();
-      client.leave();
+      handleCleanup();
     };
   }, [channelName, isVideo]);
 
@@ -131,21 +291,18 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
       const screenTrack = await AgoraRTC.createScreenVideoTrack();
       await client.unpublish(localTracks.videoTrack);
       await client.publish(screenTrack);
-      setScreenTrack(screenTrack);
+      screenTrackRef.current = screenTrack;
       setIsScreenSharing(true);
     } else {
-      await client.unpublish(screenTrack);
+      await client.unpublish(screenTrackRef.current);
       await client.publish(localTracks.videoTrack);
-      screenTrack.stop();
-      setScreenTrack(null);
+      screenTrackRef.current = null;
       setIsScreenSharing(false);
     }
   };
 
   const handleEndCall = async () => {
-    Object.values(localTracks).forEach(track => track?.stop());
-    Object.values(localTracks).forEach(track => track?.close());
-    await client.leave();
+    await handleCleanup();
     onEndCall();
   };
 
