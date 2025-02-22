@@ -1,9 +1,10 @@
 'use client';
 
 import {
-    Dialog,
-    DialogContent,
+  Dialog,
+  DialogContent,
 } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
 import Pusher from 'pusher-js';
 import { useEffect, useState } from "react";
 import { CallInterface } from "./CallInterface";
@@ -28,10 +29,13 @@ export function CallDialog({
   callerImage,
   isIncoming = false,
 }: CallDialogProps) {
+  const { toast } = useToast();
   const [callStatus, setCallStatus] = useState<'calling' | 'connected' | 'ended'>('calling');
+  const [pusherChannel, setPusherChannel] = useState<any>(null);
 
+  // Reset call status when dialog opens
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
       setCallStatus('calling');
     }
   }, [isOpen]);
@@ -53,24 +57,55 @@ export function CallDialog({
 
     const channel = pusher.subscribe(`call-${channelName}`);
 
-    channel.bind('call-accepted', () => {
+    channel.bind('call-accepted', (data: any) => {
+      console.log('Call accepted event received');
       setCallStatus('connected');
+      toast({
+        title: "Call Connected",
+        description: "You are now connected to the call",
+      });
     });
 
-    channel.bind('call-ended', () => {
+    channel.bind('call-ended', (data: any) => {
+      console.log('Call ended event received');
       setCallStatus('ended');
-      onClose();
+      toast({
+        title: "Call Ended",
+        description: "The call has been ended",
+      });
+      handleCleanupAndClose();
     });
 
+    channel.bind('call-rejected', (data: any) => {
+      console.log('Call rejected event received');
+      setCallStatus('ended');
+      toast({
+        title: "Call Rejected",
+        description: "The call was rejected",
+        variant: "destructive",
+      });
+      handleCleanupAndClose();
+    });
+
+    setPusherChannel(channel);
+
+    // Cleanup function
     return () => {
       channel.unbind_all();
       pusher.unsubscribe(`call-${channelName}`);
     };
-  }, [channelName, isOpen, onClose]);
+  }, [channelName, isOpen]);
+
+  const handleCleanupAndClose = () => {
+    // Ensure we cleanup properly
+    setCallStatus('ended');
+    onClose();
+  };
 
   const handleAcceptCall = async () => {
     try {
-      await fetch('/api/call/accept', {
+      console.log('Accepting call...', { channelName });
+      const response = await fetch('/api/call/accept', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,35 +114,106 @@ export function CallDialog({
           channelName,
         }),
       });
-      
+
+      if (!response.ok) {
+        throw new Error('Failed to accept call');
+      }
+
+      console.log('Call accepted successfully');
       setCallStatus('connected');
+      toast({
+        title: "Call Accepted",
+        description: "You have joined the call",
+      });
     } catch (error) {
       console.error('Error accepting call:', error);
-      onClose();
+      toast({
+        title: "Error",
+        description: "Failed to accept call",
+        variant: "destructive",
+      });
+      handleCleanupAndClose();
     }
   };
 
   const handleEndCall = async () => {
     try {
-      await fetch('/api/call/end', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          channelName,
-        }),
-      });
+      console.log('Ending call...', { isIncoming, callStatus });
+      if (isIncoming && callStatus === 'calling') {
+        // If it's an incoming call and still in calling state, send reject
+        const response = await fetch('/api/call/reject', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channelName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to reject call');
+        }
+
+        toast({
+          title: "Call Rejected",
+          description: "You have rejected the call",
+        });
+      } else {
+        // Otherwise send normal end call
+        const response = await fetch('/api/call/end', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channelName,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to end call');
+        }
+
+        toast({
+          title: "Call Ended",
+          description: "You have ended the call",
+        });
+      }
+      console.log('Call ended successfully');
     } catch (error) {
       console.error('Error ending call:', error);
+      toast({
+        title: "Error",
+        description: "Failed to end call properly",
+        variant: "destructive",
+      });
     }
     
-    setCallStatus('ended');
-    onClose();
+    handleCleanupAndClose();
+  };
+
+  const handleDialogClose = () => {
+    // Only allow closing if the call has ended
+    if (callStatus === 'connected') {
+      toast({
+        title: "Cannot Close",
+        description: "Please end the call before closing",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // If the call is still in calling state, end it properly
+    if (callStatus === 'calling') {
+      handleEndCall();
+    } else {
+      handleCleanupAndClose();
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-4xl h-[80vh] p-0">
         {callStatus === 'calling' ? (
           <CallingOverlay

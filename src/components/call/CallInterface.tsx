@@ -53,14 +53,15 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           null
         );
 
-        // Create and publish tracks
-        const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
-        const [audioTrack, videoTrack] = tracks;
-
+        // Create and publish tracks based on call type
         if (isVideo) {
+          // For video calls, create both audio and video tracks
+          const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
           await client.publish([audioTrack, videoTrack]);
           setLocalTracks({ audioTrack, videoTrack });
         } else {
+          // For voice calls, only create audio track
+          const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
           await client.publish([audioTrack]);
           setLocalTracks({ audioTrack });
         }
@@ -69,7 +70,7 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
         client.on('user-published', async (user, mediaType) => {
           await client.subscribe(user, mediaType);
           
-          if (mediaType === 'video') {
+          if (mediaType === 'video' && isVideo) {
             setRemoteUsers(prev => [...prev, user]);
           }
           if (mediaType === 'audio') {
@@ -152,23 +153,33 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   return (
     <div className="relative h-full w-full bg-gray-900 rounded-lg overflow-hidden">
       {/* Video Containers */}
-      <div className="grid grid-cols-2 gap-4 p-4 h-full">
-        {/* Local Video */}
-        {isVideo && localTracks.videoTrack && (
-          <div className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
-            <div className="absolute inset-0" id="local-video"></div>
-            {localTracks.videoTrack.play('local-video')}
-          </div>
-        )}
+      {isVideo ? (
+        <div className="grid grid-cols-2 gap-4 p-4 h-full">
+          {/* Local Video */}
+          {localTracks.videoTrack && (
+            <div className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
+              <div className="absolute inset-0" id="local-video"></div>
+              {localTracks.videoTrack.play('local-video')}
+            </div>
+          )}
 
-        {/* Remote Videos */}
-        {remoteUsers.map(user => (
-          <div key={user.uid} className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
-            <div className="absolute inset-0" id={`remote-video-${user.uid}`}></div>
-            {user.videoTrack?.play(`remote-video-${user.uid}`)}
+          {/* Remote Videos */}
+          {remoteUsers.map(user => (
+            <div key={user.uid} className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
+              <div className="absolute inset-0" id={`remote-video-${user.uid}`}></div>
+              {user.videoTrack?.play(`remote-video-${user.uid}`)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        // Voice call UI
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center space-y-4">
+            <div className="text-2xl font-semibold text-white">Voice Call</div>
+            <div className="text-gray-400">Call in progress...</div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
@@ -183,25 +194,25 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           </Button>
 
           {isVideo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full bg-white/10 hover:bg-white/20"
-              onClick={toggleVideo}
-            >
-              {isVideoMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
-            </Button>
-          )}
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full bg-white/10 hover:bg-white/20"
+                onClick={toggleVideo}
+              >
+                {isVideoMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+              </Button>
 
-          {isVideo && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full bg-white/10 hover:bg-white/20"
-              onClick={toggleScreenShare}
-            >
-              <Monitor className="h-5 w-5" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full bg-white/10 hover:bg-white/20"
+                onClick={toggleScreenShare}
+              >
+                <Monitor className="h-5 w-5" />
+              </Button>
+            </>
           )}
 
           <Button
