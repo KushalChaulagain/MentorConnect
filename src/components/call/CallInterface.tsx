@@ -38,9 +38,11 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   const [screenTrack, setScreenTrack] = useState<ILocalVideoTrack | null>(null);
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
-  const cleanupTimeoutRef = useRef<NodeJS.Timeout>();
+  const [isConnected, setIsConnected] = useState(false);
 
   const cleanup = async () => {
+    if (!mountedRef.current) return;
+
     try {
       // Stop and close all local tracks
       Object.values(localTracks).forEach(track => {
@@ -57,10 +59,12 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
       // Remove all event listeners
       client.removeAllListeners();
 
-      // Leave the channel if connected or connecting
+      // Only attempt to leave if connected or connecting
       if (['CONNECTED', 'CONNECTING'].includes(client.connectionState)) {
         await client.leave();
       }
+      
+      setIsConnected(false);
     } catch (error) {
       console.error('Error during cleanup:', error);
     }
@@ -78,8 +82,8 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
         // Clean up any existing call first
         await cleanup();
 
-        // Wait a bit before initializing new call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         if (!mountedRef.current) return;
 
@@ -95,15 +99,15 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
 
         if (!mountedRef.current) return;
 
-        // Only join if not already connected or connecting
-        if (!['CONNECTED', 'CONNECTING'].includes(client.connectionState)) {
-          await client.join(
-            process.env.NEXT_PUBLIC_AGORA_APP_ID!,
-            channelName,
-            token,
-            null
-          );
-        }
+        // Join the channel
+        await client.join(
+          process.env.NEXT_PUBLIC_AGORA_APP_ID!,
+          channelName,
+          token,
+          null
+        );
+
+        setIsConnected(true);
 
         if (!mountedRef.current) {
           await cleanup();
@@ -112,8 +116,12 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
 
         // Create and publish tracks
         if (isVideo) {
-          tracks = await AgoraRTC.createMicrophoneAndCameraTracks(
-            undefined,
+          const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+            {
+              AEC: true,
+              ANS: true,
+              AGC: true,
+            },
             {
               encoderConfig: {
                 width: 640,
@@ -126,35 +134,45 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           );
 
           if (!mountedRef.current) {
-            tracks.forEach(track => track.close());
-            await client.leave();
+            audioTrack.close();
+            videoTrack.close();
+            await cleanup();
             return;
           }
 
-          const [audioTrack, videoTrack] = tracks;
-          await client.publish([audioTrack, videoTrack]);
-          
-          if (mountedRef.current) {
-            setLocalTracks({ audioTrack, videoTrack });
-            setTimeout(() => {
-              if (mountedRef.current && videoTrack) {
-                videoTrack.play('local-video');
-              }
-            }, 100);
+          // Only publish if still connected
+          if (client.connectionState === 'CONNECTED') {
+            await client.publish([audioTrack, videoTrack]);
+            
+            if (mountedRef.current) {
+              setLocalTracks({ audioTrack, videoTrack });
+              // Wait for DOM to be ready
+              setTimeout(() => {
+                if (mountedRef.current && videoTrack) {
+                  videoTrack.play('local-video');
+                }
+              }, 500);
+            }
           }
         } else {
-          const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-          tracks = [audioTrack];
+          const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+            AEC: true,
+            ANS: true,
+            AGC: true,
+          });
 
           if (!mountedRef.current) {
             audioTrack.close();
-            await client.leave();
+            await cleanup();
             return;
           }
 
-          await client.publish([audioTrack]);
-          if (mountedRef.current) {
-            setLocalTracks({ audioTrack });
+          // Only publish if still connected
+          if (client.connectionState === 'CONNECTED') {
+            await client.publish([audioTrack]);
+            if (mountedRef.current) {
+              setLocalTracks({ audioTrack });
+            }
           }
         }
 
@@ -166,12 +184,13 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
             await client.subscribe(user, mediaType);
             
             if (mediaType === 'video') {
-              setRemoteUsers(prev => [...prev, user]);
+              setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user]);
+              // Wait for DOM to be ready
               setTimeout(() => {
                 if (mountedRef.current && user.videoTrack) {
                   user.videoTrack.play(`remote-video-${user.uid}`);
                 }
-              }, 100);
+              }, 500);
             }
             if (mediaType === 'audio' && user.audioTrack) {
               user.audioTrack.play();
@@ -191,12 +210,16 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
         client.on('user-left', (user) => {
           if (!mountedRef.current) return;
           setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+          // If no users left, end the call
+          if (remoteUsers.length === 0) {
+            handleEndCall();
+          }
         });
 
       } catch (error) {
         console.error('Error initializing call:', error);
         if (mountedRef.current) {
-          cleanup();
+          await cleanup();
           onEndCall();
         }
       } finally {
@@ -210,15 +233,7 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
     // Cleanup function
     return () => {
       mountedRef.current = false;
-      
-      if (cleanupTimeoutRef.current) {
-        clearTimeout(cleanupTimeoutRef.current);
-      }
-
-      // Delay cleanup slightly to ensure proper handling
-      cleanupTimeoutRef.current = setTimeout(() => {
-        cleanup();
-      }, 100);
+      cleanup();
     };
   }, [channelName, isVideo]);
 
