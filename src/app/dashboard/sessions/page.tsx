@@ -145,7 +145,7 @@ export default function SessionsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">My Sessions</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your mentoring sessions and availability
+            {format(date, 'MMMM yyyy')}
           </p>
         </div>
 
@@ -154,7 +154,11 @@ export default function SessionsPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleNavigate(new Date(date.setDate(date.getDate() - 7)))}
+              onClick={() => {
+                const newDate = new Date(date);
+                newDate.setMonth(date.getMonth() - 1);
+                handleNavigate(newDate);
+              }}
               className="h-8 w-8 p-0 rounded-none rounded-l-md"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -170,7 +174,11 @@ export default function SessionsPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleNavigate(new Date(date.setDate(date.getDate() + 7)))}
+              onClick={() => {
+                const newDate = new Date(date);
+                newDate.setMonth(date.getMonth() + 1);
+                handleNavigate(newDate);
+              }}
               className="h-8 w-8 p-0 rounded-none rounded-r-md"
             >
               <ChevronRight className="h-4 w-4" />

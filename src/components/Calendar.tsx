@@ -85,7 +85,7 @@ export default function Calendar({
   onSelectEvent,
   onSelectSlot,
   isEditable = false,
-  view = 'week',
+  view = 'month',
   onViewChange,
   date = new Date(),
   onNavigate,
@@ -122,6 +122,10 @@ export default function Calendar({
           font-size: 0.875rem;
           color: hsl(var(--foreground));
         }
+        .rbc-date-cell.rbc-now {
+          font-weight: bold;
+          color: hsl(var(--primary));
+        }
         .rbc-off-range {
           color: hsl(var(--muted-foreground) / 0.5);
         }
@@ -155,6 +159,22 @@ export default function Calendar({
         }
         .rbc-toolbar {
           display: none;
+        }
+        .rbc-month-header {
+          height: 40px;
+          display: flex;
+          align-items: center;
+          background: hsl(var(--accent) / 0.1);
+          border-bottom: 1px solid hsl(var(--border));
+        }
+        .rbc-month-header .rbc-header {
+          flex: 1;
+          text-align: center;
+          padding: 8px;
+          border-left: 1px solid hsl(var(--border) / 0.3);
+        }
+        .rbc-month-header .rbc-header:first-child {
+          border-left: none;
         }
         .rbc-time-view {
           border: 1px solid hsl(var(--border));
@@ -226,6 +246,10 @@ export default function Calendar({
           timeGutterFormat: (date: Date) => format(date, 'HH:mm'),
           eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
             `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`,
+          dayFormat: (date: Date) => format(date, 'EEE'),
+          dayHeaderFormat: (date: Date) => format(date, 'EEE dd'),
+          dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
+            `${format(start, 'MMMM dd')} - ${format(end, 'MMMM dd, yyyy')}`,
         }}
         className="text-foreground"
       />
