@@ -106,6 +106,8 @@ model Availability {
   day             String
   slots           Json         // Array of { start: string, end: string }
   mentorProfile   MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorProfileId, day])
 }
 
 model Booking {
