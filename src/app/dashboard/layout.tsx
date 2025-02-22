@@ -5,7 +5,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { Notifications } from "@/components/notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Calendar, LayoutDashboard, MessageSquare, Search, Settings, Star, Users } from "lucide-react";
+import { Calendar, LayoutDashboard, MessageSquare, Search, Settings, Star } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -70,13 +70,13 @@ export default function DashboardLayout({
     },
     {
       title: "My Sessions",
-      href: "/dashboard/mentor/sessions",
+      href: "/dashboard/sessions",
       icon: Calendar,
     },
     {
       title: "Availability",
-      href: "/dashboard/mentor/availability",
-      icon: Users,
+      href: "/dashboard/availability",
+      icon: Calendar,
     },
     {
       title: "Reviews",
@@ -108,7 +108,7 @@ export default function DashboardLayout({
     },
     {
       title: "My Sessions",
-      href: "/dashboard/mentee/sessions",
+      href: "/dashboard/sessions",
       icon: Calendar,
     },
     {
