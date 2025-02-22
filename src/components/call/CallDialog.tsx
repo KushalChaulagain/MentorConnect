@@ -1,12 +1,12 @@
 'use client';
 
 import {
-  Dialog,
-  DialogContent,
+    Dialog,
+    DialogContent,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import Pusher from 'pusher-js';
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CallInterface } from "./CallInterface";
 import { CallingOverlay } from "./CallingOverlay";
 
@@ -32,13 +32,44 @@ export function CallDialog({
   const { toast } = useToast();
   const [callStatus, setCallStatus] = useState<'calling' | 'connected' | 'ended'>('calling');
   const [pusherChannel, setPusherChannel] = useState<any>(null);
+  const mediaTracksRef = useRef<MediaStreamTrack[]>([]);
 
   // Reset call status when dialog opens
   useEffect(() => {
     if (isOpen) {
       setCallStatus('calling');
+      // Request permissions early to handle user's choice
+      if (isVideo) {
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then(stream => {
+            mediaTracksRef.current = stream.getTracks();
+          })
+          .catch(error => {
+            console.error('Error accessing media devices:', error);
+            toast({
+              title: "Permission Error",
+              description: "Failed to access camera or microphone",
+              variant: "destructive",
+            });
+            handleCleanupAndClose();
+          });
+      } else {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            mediaTracksRef.current = stream.getTracks();
+          })
+          .catch(error => {
+            console.error('Error accessing microphone:', error);
+            toast({
+              title: "Permission Error",
+              description: "Failed to access microphone",
+              variant: "destructive",
+            });
+            handleCleanupAndClose();
+          });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isVideo]);
 
   useEffect(() => {
     if (!channelName || !isOpen) return;
@@ -89,15 +120,22 @@ export function CallDialog({
 
     setPusherChannel(channel);
 
-    // Cleanup function
     return () => {
       channel.unbind_all();
       pusher.unsubscribe(`call-${channelName}`);
     };
   }, [channelName, isOpen]);
 
+  const cleanupMediaTracks = () => {
+    // Stop all media tracks
+    mediaTracksRef.current.forEach(track => {
+      track.stop();
+    });
+    mediaTracksRef.current = [];
+  };
+
   const handleCleanupAndClose = () => {
-    // Ensure we cleanup properly
+    cleanupMediaTracks();
     setCallStatus('ended');
     onClose();
   };
@@ -214,7 +252,13 @@ export function CallDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogContent className="max-w-4xl h-[80vh] p-0">
+      <DialogContent 
+        className="max-w-4xl h-[80vh] p-0"
+        aria-describedby="call-dialog-description"
+      >
+        <div id="call-dialog-description" className="sr-only">
+          {isIncoming ? 'Incoming call interface' : 'Outgoing call interface'}
+        </div>
         {callStatus === 'calling' ? (
           <CallingOverlay
             callerName={callerName}

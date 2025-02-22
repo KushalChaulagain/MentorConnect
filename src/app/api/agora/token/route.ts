@@ -29,12 +29,12 @@ export async function POST(req: Request) {
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // Build the token
+    // Build the token with uid 0 to let Agora assign one
     const token = RtcTokenBuilder.buildTokenWithUid(
       appId,
       appCertificate,
       channelName,
-      0, // uid - we'll use 0 to let Agora assign one
+      0,
       RtcRole.PUBLISHER,
       privilegeExpiredTs
     );
