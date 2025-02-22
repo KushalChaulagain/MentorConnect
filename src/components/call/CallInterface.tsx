@@ -1,14 +1,15 @@
 'use client';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AgoraRTC, {
   IAgoraRTCClient,
   IAgoraRTCRemoteUser,
   ICameraVideoTrack,
   ILocalVideoTrack,
-  IMicrophoneAudioTrack,
+  IMicrophoneAudioTrack
 } from 'agora-rtc-sdk-ng';
-import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from 'lucide-react';
+import { Expand, Mic, MicOff, Monitor, PhoneOff, Signal, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface CallInterfaceProps {
@@ -17,14 +18,23 @@ interface CallInterfaceProps {
   onEndCall: () => void;
 }
 
+interface CallStats {
+  networkQuality: {
+    uplink: number;
+    downlink: number;
+  };
+  packetLossRate: number;
+  latency: number;
+}
+
 const client: IAgoraRTCClient = AgoraRTC.createClient({
   mode: 'rtc',
   codec: 'vp8',
 });
 
 // Disable Agora logging
-AgoraRTC.setLogLevel(4); // Error level only
-AgoraRTC.disableLogUpload(); // Disable log upload
+AgoraRTC.setLogLevel(4);
+AgoraRTC.disableLogUpload();
 
 export function CallInterface({ channelName, isVideo, onEndCall }: CallInterfaceProps) {
   const [localTracks, setLocalTracks] = useState<{
@@ -36,22 +46,96 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [screenTrack, setScreenTrack] = useState<ILocalVideoTrack | null>(null);
+  const [callDuration, setCallDuration] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [callStats, setCallStats] = useState<CallStats>({
+    networkQuality: { uplink: 0, downlink: 0 },
+    packetLossRate: 0,
+    latency: 0,
+  });
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
+  const durationIntervalRef = useRef<NodeJS.Timeout>();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Call duration timer
+  useEffect(() => {
+    if (isConnected) {
+      durationIntervalRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }
+
+    return () => {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+      }
+    };
+  }, [isConnected]);
+
+  // Format duration to HH:MM:SS
+  const formatDuration = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Network quality indicator
+  const getNetworkQualityLabel = (quality: number) => {
+    switch (quality) {
+      case 1: return 'Excellent';
+      case 2: return 'Good';
+      case 3: return 'Fair';
+      case 4: return 'Poor';
+      case 5: return 'Very Poor';
+      default: return 'Unknown';
+    }
+  };
+
+  const getNetworkQualityColor = (quality: number) => {
+    switch (quality) {
+      case 1: return 'bg-green-500';
+      case 2: return 'bg-green-400';
+      case 3: return 'bg-yellow-500';
+      case 4: return 'bg-orange-500';
+      case 5: return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  // Fullscreen toggle
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
 
   const cleanup = async () => {
     if (!mountedRef.current) return;
 
     try {
-      // Stop and close all local tracks
-      Object.values(localTracks).forEach(track => {
-        if (track) {
-          track.stop();
-          track.close();
-        }
-      });
+      // Stop and close all local tracks first
+      if (localTracks.audioTrack) {
+        localTracks.audioTrack.stop();
+        localTracks.audioTrack.close();
+      }
+      if (localTracks.videoTrack) {
+        localTracks.videoTrack.stop();
+        localTracks.videoTrack.close();
+      }
+      if (screenTrack) {
+        screenTrack.stop();
+        screenTrack.close();
+      }
+
       setLocalTracks({});
+      setScreenTrack(null);
 
       // Clear remote users
       setRemoteUsers([]);
@@ -59,12 +143,15 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
       // Remove all event listeners
       client.removeAllListeners();
 
-      // Only attempt to leave if connected or connecting
-      if (['CONNECTED', 'CONNECTING'].includes(client.connectionState)) {
+      // Check connection state before leaving
+      const currentState = client.connectionState;
+      if (currentState === 'CONNECTED' || currentState === 'CONNECTING') {
         await client.leave();
       }
-      
+
       setIsConnected(false);
+      setCallDuration(0);
+      clearInterval(durationIntervalRef.current);
     } catch (error) {
       console.error('Error during cleanup:', error);
     }
@@ -72,18 +159,18 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
 
   useEffect(() => {
     mountedRef.current = true;
-    let tracks: any[] = [];
+    let initTimeout: NodeJS.Timeout;
 
     const initCall = async () => {
       if (initializingRef.current || !mountedRef.current) return;
       initializingRef.current = true;
 
       try {
-        // Clean up any existing call first
+        // Ensure proper cleanup first
         await cleanup();
 
-        // Wait for cleanup to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add a delay to ensure cleanup is complete
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         if (!mountedRef.current) return;
 
@@ -93,11 +180,16 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ channelName }),
         });
-        
+
         if (!response.ok) throw new Error('Failed to get token');
         const { token } = await response.json();
 
         if (!mountedRef.current) return;
+
+        // Check client state before joining
+        if (['CONNECTED', 'CONNECTING'].includes(client.connectionState)) {
+          await client.leave();
+        }
 
         // Join the channel
         await client.join(
@@ -107,92 +199,107 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           null
         );
 
-        setIsConnected(true);
-
         if (!mountedRef.current) {
           await cleanup();
           return;
         }
 
-        // Create and publish tracks
-        if (isVideo) {
-          const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-            {
+        setIsConnected(true);
+
+        // Create and publish tracks with improved error handling
+        try {
+          if (isVideo) {
+            const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
+              {
+                AEC: true,
+                ANS: true,
+                AGC: true,
+              },
+              {
+                encoderConfig: {
+                  width: 640,
+                  height: 360,
+                  frameRate: 30,
+                  bitrateMin: 400,
+                  bitrateMax: 1000,
+                },
+              }
+            );
+
+            if (!mountedRef.current) {
+              audioTrack.close();
+              videoTrack.close();
+              await cleanup();
+              return;
+            }
+
+            if (client.connectionState === 'CONNECTED') {
+              await client.publish([audioTrack, videoTrack]);
+              
+              if (mountedRef.current) {
+                setLocalTracks({ audioTrack, videoTrack });
+                // Increased delay for DOM readiness
+                initTimeout = setTimeout(() => {
+                  if (mountedRef.current && videoTrack) {
+                    videoTrack.play('local-video');
+                  }
+                }, 1000);
+              }
+            }
+          } else {
+            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
               AEC: true,
               ANS: true,
               AGC: true,
-            },
-            {
-              encoderConfig: {
-                width: 640,
-                height: 360,
-                frameRate: 30,
-                bitrateMin: 400,
-                bitrateMax: 1000,
-              },
-            }
-          );
+            });
 
-          if (!mountedRef.current) {
-            audioTrack.close();
-            videoTrack.close();
+            if (!mountedRef.current) {
+              audioTrack.close();
+              await cleanup();
+              return;
+            }
+
+            if (client.connectionState === 'CONNECTED') {
+              await client.publish([audioTrack]);
+              if (mountedRef.current) {
+                setLocalTracks({ audioTrack });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error creating tracks:', error);
+          if (mountedRef.current) {
             await cleanup();
-            return;
+            onEndCall();
           }
-
-          // Only publish if still connected
-          if (client.connectionState === 'CONNECTED') {
-            await client.publish([audioTrack, videoTrack]);
-            
-            if (mountedRef.current) {
-              setLocalTracks({ audioTrack, videoTrack });
-              // Wait for DOM to be ready
-              setTimeout(() => {
-                if (mountedRef.current && videoTrack) {
-                  videoTrack.play('local-video');
-                }
-              }, 500);
-            }
-          }
-        } else {
-          const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-            AEC: true,
-            ANS: true,
-            AGC: true,
-          });
-
-          if (!mountedRef.current) {
-            audioTrack.close();
-            await cleanup();
-            return;
-          }
-
-          // Only publish if still connected
-          if (client.connectionState === 'CONNECTED') {
-            await client.publish([audioTrack]);
-            if (mountedRef.current) {
-              setLocalTracks({ audioTrack });
-            }
-          }
+          return;
         }
 
-        // Set up event handlers
+        // Set up event handlers with improved error handling
         client.on('user-published', async (user, mediaType) => {
           if (!mountedRef.current) return;
           
           try {
             await client.subscribe(user, mediaType);
             
-            if (mediaType === 'video') {
-              setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user]);
-              // Wait for DOM to be ready
+            if (mediaType === 'video' && mountedRef.current) {
+              // Prevent duplicate users
+              setRemoteUsers(prev => {
+                if (prev.some(u => u.uid === user.uid)) {
+                  return prev;
+                }
+                return [...prev, user];
+              });
+
+              // Increased delay for DOM readiness
               setTimeout(() => {
                 if (mountedRef.current && user.videoTrack) {
                   user.videoTrack.play(`remote-video-${user.uid}`);
                 }
-              }, 500);
+              }, 1000);
             }
-            if (mediaType === 'audio' && user.audioTrack) {
+            
+            if (mediaType === 'audio' && user.audioTrack && mountedRef.current) {
               user.audioTrack.play();
             }
           } catch (error) {
@@ -216,6 +323,23 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           }
         });
 
+        // Add network quality monitoring
+        client.on('network-quality', (stats) => {
+          setCallStats(prev => ({
+            ...prev,
+            networkQuality: {
+              uplink: stats.uplinkNetworkQuality,
+              downlink: stats.downlinkNetworkQuality,
+            }
+          }));
+        });
+
+        // Add connection state change monitoring
+        client.on('connection-state-change', (curState, prevState, reason) => {
+          console.log('Connection state changed:', curState, prevState, reason);
+          setIsConnected(curState === 'CONNECTED');
+        });
+
       } catch (error) {
         console.error('Error initializing call:', error);
         if (mountedRef.current) {
@@ -228,12 +352,13 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
     };
 
     // Initialize the call
-    initCall();
+    initCall().catch(console.error);
 
-    // Cleanup function
+    // Enhanced cleanup
     return () => {
       mountedRef.current = false;
-      cleanup();
+      clearTimeout(initTimeout);
+      cleanup().catch(console.error);
     };
   }, [channelName, isVideo]);
 
@@ -303,19 +428,43 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   };
 
   return (
-    <div className="relative h-full w-full bg-gray-900 rounded-lg overflow-hidden">
+    <div ref={containerRef} className="relative h-full w-full bg-gray-900 rounded-lg overflow-hidden">
+      {/* Connection Status */}
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+        <Badge variant={isConnected ? "default" : "destructive"}>
+          {isConnected ? 'Connected' : 'Disconnected'}
+        </Badge>
+        <Badge variant="secondary" className={`${getNetworkQualityColor(callStats.networkQuality.downlink)}`}>
+          <Signal className="w-4 h-4 mr-1" />
+          {getNetworkQualityLabel(callStats.networkQuality.downlink)}
+        </Badge>
+      </div>
+
+      {/* Call Duration */}
+      <div className="absolute top-4 right-4 z-10">
+        <Badge variant="outline" className="text-white">
+          {formatDuration(callDuration)}
+        </Badge>
+      </div>
+
       {/* Video Containers */}
       {isVideo ? (
         <div className="grid grid-cols-2 gap-4 p-4 h-full">
           {/* Local Video */}
           <div className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
             <div className="absolute inset-0" id="local-video"></div>
+            <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-white text-sm">
+              You {isAudioMuted && '(Muted)'}
+            </div>
           </div>
 
           {/* Remote Videos */}
           {remoteUsers.map(user => (
             <div key={user.uid} className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
               <div className="absolute inset-0" id={`remote-video-${user.uid}`}></div>
+              <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-white text-sm">
+                Participant {user.uid} {user.hasAudio === false && '(Muted)'}
+              </div>
             </div>
           ))}
         </div>
@@ -358,6 +507,15 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
                 onClick={toggleScreenShare}
               >
                 <Monitor className="h-5 w-5" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full bg-white/10 hover:bg-white/20"
+                onClick={toggleFullscreen}
+              >
+                <Expand className="h-5 w-5" />
               </Button>
             </>
           )}
