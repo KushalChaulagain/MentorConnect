@@ -39,8 +39,8 @@ export function Notifications() {
 
   useEffect(() => {
     // Create audio element for notification sound
-    audioRef.current = new Audio("/notification.mp3");
-    audioRef.current.volume = 0.5;
+    audioRef.current = new Audio("/sounds/notification.mp3");
+    audioRef.current.volume = 0.10;
 
     if (session?.user?.id) {
       setupPusher();
@@ -49,6 +49,8 @@ export function Notifications() {
 
     return () => {
       if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
         audioRef.current = null;
       }
     };

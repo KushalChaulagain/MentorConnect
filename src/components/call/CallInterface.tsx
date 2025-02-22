@@ -2,10 +2,11 @@
 
 import { Button } from '@/components/ui/button';
 import AgoraRTC, {
-    IAgoraRTCClient,
-    IAgoraRTCRemoteUser,
-    ICameraVideoTrack,
-    IMicrophoneAudioTrack,
+  IAgoraRTCClient,
+  IAgoraRTCRemoteUser,
+  ICameraVideoTrack,
+  ILocalVideoTrack,
+  IMicrophoneAudioTrack,
 } from 'agora-rtc-sdk-ng';
 import { Mic, MicOff, Monitor, PhoneOff, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -21,9 +22,9 @@ const client: IAgoraRTCClient = AgoraRTC.createClient({
   codec: 'vp8',
 });
 
-// Configure Agora client logging
-AgoraRTC.setLogLevel(1); // Set to 0 for more detailed logs if needed
-AgoraRTC.enableLogUpload();
+// Disable Agora logging
+AgoraRTC.setLogLevel(4); // Error level only
+AgoraRTC.disableLogUpload(); // Disable log upload
 
 export function CallInterface({ channelName, isVideo, onEndCall }: CallInterfaceProps) {
   const [localTracks, setLocalTracks] = useState<{
@@ -34,10 +35,36 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [screenTrack, setScreenTrack] = useState<any>(null);
+  const [screenTrack, setScreenTrack] = useState<ILocalVideoTrack | null>(null);
   const mountedRef = useRef(true);
   const initializingRef = useRef(false);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const cleanup = async () => {
+    try {
+      // Stop and close all local tracks
+      Object.values(localTracks).forEach(track => {
+        if (track) {
+          track.stop();
+          track.close();
+        }
+      });
+      setLocalTracks({});
+
+      // Clear remote users
+      setRemoteUsers([]);
+
+      // Remove all event listeners
+      client.removeAllListeners();
+
+      // Leave the channel if connected or connecting
+      if (['CONNECTED', 'CONNECTING'].includes(client.connectionState)) {
+        await client.leave();
+      }
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    }
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -68,16 +95,18 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
 
         if (!mountedRef.current) return;
 
-        // Join the channel
-        await client.join(
-          process.env.NEXT_PUBLIC_AGORA_APP_ID!,
-          channelName,
-          token,
-          null
-        );
+        // Only join if not already connected or connecting
+        if (!['CONNECTED', 'CONNECTING'].includes(client.connectionState)) {
+          await client.join(
+            process.env.NEXT_PUBLIC_AGORA_APP_ID!,
+            channelName,
+            token,
+            null
+          );
+        }
 
         if (!mountedRef.current) {
-          await client.leave();
+          await cleanup();
           return;
         }
 
@@ -175,26 +204,6 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
       }
     };
 
-    const cleanup = async () => {
-      // Stop and close all local tracks
-      Object.values(localTracks).forEach(track => {
-        track?.stop();
-        track?.close();
-      });
-      setLocalTracks({});
-
-      // Clear remote users
-      setRemoteUsers([]);
-
-      // Remove all event listeners
-      client.removeAllListeners();
-
-      // Leave the channel if connected
-      if (client.connectionState === 'CONNECTED') {
-        await client.leave();
-      }
-    };
-
     // Initialize the call
     initCall();
 
@@ -230,27 +239,38 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   const toggleScreenShare = async () => {
     if (!isScreenSharing) {
       try {
-        const screenTrack = await AgoraRTC.createScreenVideoTrack();
+        const track = await AgoraRTC.createScreenVideoTrack({
+          encoderConfig: {
+            width: 1920,
+            height: 1080,
+            frameRate: 30,
+            bitrateMin: 600,
+            bitrateMax: 2000,
+          }
+        }) as ILocalVideoTrack;
+        
         if (mountedRef.current) {
           await client.unpublish(localTracks.videoTrack);
-          await client.publish(screenTrack);
-          setScreenTrack(screenTrack);
+          await client.publish(track);
+          setScreenTrack(track);
           setIsScreenSharing(true);
         } else {
-          screenTrack.close();
+          track.close();
         }
       } catch (error) {
         console.error('Error sharing screen:', error);
       }
     } else {
       try {
-        await client.unpublish(screenTrack);
-        if (mountedRef.current && localTracks.videoTrack) {
-          await client.publish(localTracks.videoTrack);
+        if (screenTrack) {
+          await client.unpublish(screenTrack);
+          screenTrack.close();
+          if (mountedRef.current && localTracks.videoTrack) {
+            await client.publish(localTracks.videoTrack);
+          }
+          setScreenTrack(null);
+          setIsScreenSharing(false);
         }
-        screenTrack.stop();
-        setScreenTrack(null);
-        setIsScreenSharing(false);
       } catch (error) {
         console.error('Error stopping screen share:', error);
       }

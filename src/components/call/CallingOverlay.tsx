@@ -24,17 +24,31 @@ export function CallingOverlay({
 
   useEffect(() => {
     // Create audio element for ringtone
-    audioRef.current = new Audio("/sounds/ringtone.mp3");
-    if (audioRef.current) {
-      audioRef.current.loop = true;
-      audioRef.current.play().catch(error => {
+    const audio = new Audio("/sounds/ringtone.mp3");
+    audio.loop = true;
+    audio.volume = 0.3; // Set volume to 30%
+
+    // Test if audio can be played
+    audio.load();
+    audio.addEventListener('canplaythrough', () => {
+      audio.play().catch(error => {
         console.error('Error playing ringtone:', error);
       });
-    }
+    });
+
+    audio.addEventListener('error', (e: Event) => {
+      const target = e.target as HTMLAudioElement;
+      if (target.error) {
+        console.error('Audio error:', target.error.message);
+      }
+    });
+
+    audioRef.current = audio;
 
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = "";
         audioRef.current = null;
       }
     };
@@ -64,14 +78,24 @@ export function CallingOverlay({
               <Button
                 size="lg"
                 className="h-16 w-16 rounded-full bg-red-600 hover:bg-red-700"
-                onClick={onDecline}
+                onClick={() => {
+                  if (audioRef.current) {
+                    audioRef.current.pause();
+                  }
+                  onDecline();
+                }}
               >
                 <PhoneOff className="h-8 w-8" />
               </Button>
               <Button
                 size="lg"
                 className="h-16 w-16 rounded-full bg-green-600 hover:bg-green-700"
-                onClick={onAccept}
+                onClick={() => {
+                  if (audioRef.current) {
+                    audioRef.current.pause();
+                  }
+                  onAccept();
+                }}
               >
                 <Phone className="h-8 w-8" />
               </Button>
@@ -80,7 +104,12 @@ export function CallingOverlay({
             <Button
               size="lg"
               className="h-16 w-16 rounded-full bg-red-600 hover:bg-red-700"
-              onClick={onDecline}
+              onClick={() => {
+                if (audioRef.current) {
+                  audioRef.current.pause();
+                }
+                onDecline();
+              }}
             >
               <PhoneOff className="h-8 w-8" />
             </Button>
