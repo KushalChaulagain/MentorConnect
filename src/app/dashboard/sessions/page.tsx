@@ -140,41 +140,53 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-6 bg-background">
+      <div className="flex items-center justify-between pb-4 border-b">
         <div>
-          <h1 className="text-3xl font-bold">My Sessions</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your mentoring sessions and availability
+          <h1 className="text-2xl font-semibold tracking-tight">My Sessions</h1>
+          <p className="text-sm text-muted-foreground">
+            {format(date, 'MMMM yyyy')}
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-md border bg-card shadow-sm">
             <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handleNavigate(new Date(date.setDate(date.getDate() - 7)))}
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newDate = new Date(date);
+                newDate.setMonth(date.getMonth() - 1);
+                handleNavigate(newDate);
+              }}
+              className="h-8 w-8 p-0 rounded-none rounded-l-md"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={() => setDate(new Date())}
+              className="h-8 px-3 rounded-none border-l border-r"
             >
               Today
             </Button>
             <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handleNavigate(new Date(date.setDate(date.getDate() + 7)))}
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newDate = new Date(date);
+                newDate.setMonth(date.getMonth() + 1);
+                handleNavigate(newDate);
+              }}
+              className="h-8 w-8 p-0 rounded-none rounded-r-md"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
           <Select value={view} onValueChange={(v) => handleViewChange(v as View)}>
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="h-8 w-[110px] bg-card shadow-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -186,13 +198,13 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="flex-1 rounded-lg border bg-card shadow-sm overflow-hidden">
         <Calendar
           events={calendarEvents}
           onSelectEvent={handleEventSelect}
           isEditable={false}
-          view={view}
-          onViewChange={handleViewChange}
+          view={view as View}
+          onViewChange={(view: string) => handleViewChange(view as View)}
           date={date}
           onNavigate={handleNavigate}
         />
@@ -200,39 +212,39 @@ export default function SessionsPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         {selectedSession && (
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Session Details</DialogTitle>
               <DialogDescription>
                 <div className="space-y-4 mt-4">
-                  <div>
-                    <p className="font-medium text-sm">Mentor</p>
-                    <p className="text-foreground">{selectedSession.mentorProfile.user.name}</p>
+                  <div className="grid gap-1">
+                    <p className="text-xs font-medium text-muted-foreground">Mentor</p>
+                    <p className="text-sm">{selectedSession.mentorProfile.user.name}</p>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Mentee</p>
-                    <p className="text-foreground">{selectedSession.mentee.name}</p>
+                  <div className="grid gap-1">
+                    <p className="text-xs font-medium text-muted-foreground">Mentee</p>
+                    <p className="text-sm">{selectedSession.mentee.name}</p>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Date</p>
-                    <p className="text-foreground">{format(new Date(selectedSession.startTime), 'PPP')}</p>
+                  <div className="grid gap-1">
+                    <p className="text-xs font-medium text-muted-foreground">Date</p>
+                    <p className="text-sm">{format(new Date(selectedSession.startTime), 'PPP')}</p>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Time</p>
-                    <p className="text-foreground">
+                  <div className="grid gap-1">
+                    <p className="text-xs font-medium text-muted-foreground">Time</p>
+                    <p className="text-sm">
                       {format(new Date(selectedSession.startTime), 'p')} -{' '}
                       {format(new Date(selectedSession.endTime), 'p')}
                     </p>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">Status</p>
+                  <div className="grid gap-1">
+                    <p className="text-xs font-medium text-muted-foreground">Status</p>
                     <Badge variant={getStatusBadgeVariant(selectedSession.status)}>
                       {selectedSession.status.toLowerCase()}
                     </Badge>
                   </div>
 
                   {selectedSession.status === 'PENDING' && (
-                    <div className="flex gap-3 mt-6">
+                    <div className="flex gap-2 mt-6">
                       <Button
                         onClick={() => handleSessionUpdate(selectedSession.id, 'CONFIRMED')}
                         className="flex-1"
@@ -250,7 +262,7 @@ export default function SessionsPage() {
                   )}
 
                   {selectedSession.status === 'CONFIRMED' && (
-                    <div className="flex gap-3 mt-6">
+                    <div className="flex gap-2 mt-6">
                       <Button
                         onClick={() => handleSessionUpdate(selectedSession.id, 'COMPLETED')}
                         className="flex-1"

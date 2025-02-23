@@ -37,36 +37,45 @@ interface CalendarProps {
 }
 
 const eventStyleGetter = (event: CalendarEvent) => {
-  let backgroundColor = '#3B82F6'; // Default blue
-  let borderColor = '#2563EB';
+  let backgroundColor;
+  let borderColor;
+  let opacity = '1';
 
   switch (event.status) {
     case 'PENDING':
-      backgroundColor = '#F59E0B';
-      borderColor = '#D97706';
+      backgroundColor = 'hsl(48 96% 89%)';
+      borderColor = 'hsl(45 93% 47%)';
       break;
     case 'CONFIRMED':
-      backgroundColor = '#10B981';
-      borderColor = '#059669';
+      backgroundColor = 'hsl(142 76% 36%)';
+      borderColor = 'hsl(142 72% 29%)';
       break;
     case 'COMPLETED':
-      backgroundColor = '#6B7280';
-      borderColor = '#4B5563';
+      backgroundColor = 'hsl(217 91% 60%)';
+      borderColor = 'hsl(217 91% 50%)';
       break;
     case 'CANCELLED':
-      backgroundColor = '#EF4444';
-      borderColor = '#DC2626';
+      backgroundColor = 'hsl(0 84% 60%)';
+      borderColor = 'hsl(0 84% 50%)';
+      opacity = '0.8';
       break;
+    default:
+      backgroundColor = 'hsl(217 91% 60%)';
+      borderColor = 'hsl(217 91% 50%)';
   }
 
   return {
     style: {
       backgroundColor,
       borderColor,
-      borderWidth: '2px',
-      color: 'white',
-      borderRadius: '4px',
-      padding: '2px 4px',
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      color: event.status === 'PENDING' ? 'hsl(20 5% 9%)' : 'white',
+      borderRadius: '6px',
+      padding: '2px 6px',
+      opacity,
+      fontSize: '0.875rem',
+      fontWeight: 500,
     },
   };
 };
@@ -76,61 +85,147 @@ export default function Calendar({
   onSelectEvent,
   onSelectSlot,
   isEditable = false,
-  view = 'week',
+  view = 'month',
   onViewChange,
   date = new Date(),
   onNavigate,
 }: CalendarProps) {
   return (
-    <div className="h-[700px] bg-background rounded-lg">
+    <div className="h-[700px] bg-background rounded-lg overflow-hidden">
       <style jsx global>{`
         .rbc-calendar {
-          background-color: transparent;
+          background-color: hsl(var(--background));
+          font-family: system-ui, -apple-system, sans-serif;
         }
         .rbc-header {
+          padding: 12px 4px;
+          font-weight: 600;
+          color: hsl(var(--foreground));
+          text-transform: uppercase;
+          font-size: 11px;
+          letter-spacing: 0.5px;
+          background: hsl(var(--accent) / 0.1);
+          border-bottom: 1px solid hsl(var(--border));
+        }
+        .rbc-month-view {
+          border: 1px solid hsl(var(--border));
+          border-radius: 8px;
+          overflow: hidden;
+          background: hsl(var(--background));
+        }
+        .rbc-month-row {
+          border-top: 1px solid hsl(var(--border) / 0.3);
+        }
+        .rbc-date-cell {
           padding: 8px;
-          font-weight: 500;
-          color: var(--foreground);
+          text-align: right;
+          font-size: 0.875rem;
+          color: hsl(var(--foreground));
         }
-        .rbc-toolbar button {
-          color: var(--foreground);
-        }
-        .rbc-toolbar button:hover {
-          background-color: hsl(var(--muted));
-        }
-        .rbc-toolbar button.rbc-active {
-          background-color: hsl(var(--muted));
+        .rbc-date-cell.rbc-now {
+          font-weight: bold;
           color: hsl(var(--primary));
         }
-        .rbc-today {
-          background-color: hsl(var(--muted));
+        .rbc-off-range {
+          color: hsl(var(--muted-foreground) / 0.5);
         }
         .rbc-off-range-bg {
-          background-color: hsl(var(--muted) / 0.3);
+          background: hsl(var(--muted) / 0.3);
+        }
+        .rbc-day-bg {
+          border-left: 1px solid hsl(var(--border) / 0.3);
+          transition: all 0.2s ease;
+        }
+        .rbc-day-bg:hover {
+          background: hsl(var(--accent) / 0.1);
+        }
+        .rbc-today {
+          background-color: hsl(var(--primary) / 0.1) !important;
+        }
+        .rbc-current-time-indicator {
+          background-color: hsl(var(--primary));
+          height: 2px;
+        }
+        .rbc-event {
+          border-radius: 4px;
+          padding: 4px 8px;
+          font-size: 13px;
+          border: none !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          transition: transform 0.1s ease;
+        }
+        .rbc-event:hover {
+          transform: scale(1.02);
+        }
+        .rbc-toolbar {
+          display: none;
+        }
+        .rbc-month-header {
+          height: 40px;
+          display: flex;
+          align-items: center;
+          background: hsl(var(--accent) / 0.1);
+          border-bottom: 1px solid hsl(var(--border));
+        }
+        .rbc-month-header .rbc-header {
+          flex: 1;
+          text-align: center;
+          padding: 8px;
+          border-left: 1px solid hsl(var(--border) / 0.3);
+        }
+        .rbc-month-header .rbc-header:first-child {
+          border-left: none;
+        }
+        .rbc-time-view {
+          border: 1px solid hsl(var(--border));
+          border-radius: 8px;
+          overflow: hidden;
+          background: hsl(var(--background));
+        }
+        .rbc-time-header {
+          border-bottom: 1px solid hsl(var(--border));
+          background: hsl(var(--accent) / 0.1);
         }
         .rbc-time-content {
           border-top: 1px solid hsl(var(--border));
         }
-        .rbc-time-header-content {
-          border-left: 1px solid hsl(var(--border));
-        }
-        .rbc-time-header.rbc-overflowing {
-          border-right: 1px solid hsl(var(--border));
-        }
         .rbc-timeslot-group {
-          border-bottom: 1px solid hsl(var(--border));
+          border-bottom: 1px solid hsl(var(--border) / 0.2);
+          min-height: 60px;
+        }
+        .rbc-time-gutter {
+          font-size: 11px;
+          font-weight: 500;
+          padding: 0 8px;
+          color: hsl(var(--muted-foreground));
+          background: hsl(var(--muted) / 0.1);
         }
         .rbc-time-slot {
-          color: var(--foreground);
+          color: hsl(var(--muted-foreground));
+          font-size: 12px;
         }
         .rbc-day-slot .rbc-time-slot {
-          border-top: 1px solid hsl(var(--border) / 0.5);
+          border-top: 1px solid hsl(var(--border) / 0.1);
         }
-        .rbc-time-view {
-          border: 1px solid hsl(var(--border));
+        .rbc-time-column {
+          background: hsl(var(--background));
         }
-        .rbc-current-time-indicator {
-          background-color: hsl(var(--primary));
+        .rbc-day-slot .rbc-events-container {
+          margin-right: 1px;
+        }
+        .rbc-time-view .rbc-row {
+          min-height: 40px;
+        }
+        .rbc-show-more {
+          color: hsl(var(--primary));
+          font-size: 0.875rem;
+          font-weight: 500;
+          padding: 2px 4px;
+          background: transparent;
+        }
+        .rbc-show-more:hover {
+          color: hsl(var(--primary));
+          background: hsl(var(--accent) / 0.1);
         }
       `}</style>
       <BigCalendar
@@ -151,6 +246,10 @@ export default function Calendar({
           timeGutterFormat: (date: Date) => format(date, 'HH:mm'),
           eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
             `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`,
+          dayFormat: (date: Date) => format(date, 'EEE'),
+          dayHeaderFormat: (date: Date) => format(date, 'EEE dd'),
+          dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
+            `${format(start, 'MMMM dd')} - ${format(end, 'MMMM dd, yyyy')}`,
         }}
         className="text-foreground"
       />

@@ -17,7 +17,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const [incomingCall, setIncomingCall] = useState<{
     channelName: string;
@@ -28,6 +28,19 @@ export default function DashboardLayout({
     };
   } | null>(null);
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    if (session?.user) {
+      console.log('Dashboard Layout - Session user data:', {
+        name: session.user.name,
+        image: session.user.image,
+        email: session.user.email,
+        status: status
+      });
+    }
+  }, [session, status]);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -121,7 +134,7 @@ export default function DashboardLayout({
   const sidebarItems = session?.user?.role === 'MENTOR' ? mentorSidebarItems : menteeSidebarItems;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[#0B1120]">
       <div className="flex">
         {/* Sidebar */}
         <div className="hidden md:flex md:w-64 md:flex-col">
@@ -158,22 +171,58 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <div className="flex-1">
-          <div className="sticky top-0 z-10 flex-shrink-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-end px-6 h-full">
+          <div className="sticky top-0 z-10 flex-shrink-0 h-16 bg-[#0F172A] border-b border-gray-800">
+            <div className="flex items-center justify-between px-6 h-full">
+              <div className="flex-1">
+                {/* Left side empty for now */}
+              </div>
               <div className="flex items-center gap-4">
                 <ModeToggle />
                 <Notifications />
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {session?.user?.name}
-                  </span>
-                  <Avatar>
-                    <AvatarImage src={session?.user?.image || ""} />
-                    <AvatarFallback>
-                      {session?.user?.name?.slice(0, 2).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
+                {session?.user ? (
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 ring-2 ring-gray-800">
+                      {session.user.image ? (
+                        <AvatarImage 
+                          src={session.user.image}
+                          alt={session.user.name || "User"}
+                          className="object-cover"
+                          onError={(e) => {
+                            console.error('Image failed to load:', {
+                              src: session.user.image,
+                              error: e
+                            });
+                            setImageError(true);
+                          }}
+                          onLoad={() => {
+                            console.log('Image loaded successfully:', session.user.image);
+                            setImageLoaded(true);
+                            setImageError(false);
+                          }}
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-gray-800 text-gray-200">
+                          {session.user.name ? session.user.name.slice(0, 2).toUpperCase() : 'U'}
+                        </AvatarFallback>
+                      )}
+                      {imageError && (
+                        <AvatarFallback className="bg-gray-800 text-gray-200">
+                          {session.user.name ? session.user.name.slice(0, 2).toUpperCase() : 'U'}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-200">
+                        {session.user.name?.split(' ')[0]}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {session.user.email}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-gray-800 animate-pulse" />
+                )}
               </div>
             </div>
           </div>
