@@ -91,141 +91,151 @@ export default function Calendar({
   onNavigate,
 }: CalendarProps) {
   return (
-    <div className="h-[700px] bg-background rounded-lg overflow-hidden">
+    <div className="h-[700px] bg-[#0F172A] rounded-lg overflow-hidden border border-gray-800">
       <style jsx global>{`
+        /* Base calendar styles */
         .rbc-calendar {
-          background-color: hsl(var(--background));
-          font-family: system-ui, -apple-system, sans-serif;
+          @apply bg-[#0F172A] font-sans text-gray-200;
         }
+
+        /* Header styles */
         .rbc-header {
-          padding: 12px 4px;
-          font-weight: 600;
-          color: hsl(var(--foreground));
-          text-transform: uppercase;
-          font-size: 11px;
-          letter-spacing: 0.5px;
-          background: hsl(var(--accent) / 0.1);
-          border-bottom: 1px solid hsl(var(--border));
+          @apply px-4 py-3 font-semibold uppercase text-xs tracking-wider bg-gray-800/50 border-b border-gray-800;
         }
+
+        /* Month view styles */
         .rbc-month-view {
-          border: 1px solid hsl(var(--border));
-          border-radius: 8px;
-          overflow: hidden;
-          background: hsl(var(--background));
+          @apply border border-gray-800 rounded-lg overflow-hidden bg-[#0F172A];
         }
+
         .rbc-month-row {
-          border-top: 1px solid hsl(var(--border) / 0.3);
+          @apply border-t border-gray-800/30;
         }
+
+        /* Date cell styles */
         .rbc-date-cell {
-          padding: 8px;
-          text-align: right;
-          font-size: 0.875rem;
-          color: hsl(var(--foreground));
+          @apply p-2 text-right text-sm text-gray-300;
         }
+
         .rbc-date-cell.rbc-now {
-          font-weight: bold;
-          color: hsl(var(--primary));
+          @apply font-bold text-blue-400;
         }
+
         .rbc-off-range {
-          color: hsl(var(--muted-foreground) / 0.5);
+          @apply text-gray-600;
         }
+
         .rbc-off-range-bg {
-          background: hsl(var(--muted) / 0.3);
+          @apply bg-gray-900/30;
         }
+
+        /* Day background styles */
         .rbc-day-bg {
-          border-left: 1px solid hsl(var(--border) / 0.3);
-          transition: all 0.2s ease;
+          @apply border-l border-gray-800/30 transition-colors duration-200;
         }
+
         .rbc-day-bg:hover {
-          background: hsl(var(--accent) / 0.1);
+          @apply bg-gray-800/20;
         }
+
         .rbc-today {
-          background-color: hsl(var(--primary) / 0.1) !important;
+          @apply bg-blue-900/20 !important;
         }
-        .rbc-current-time-indicator {
-          background-color: hsl(var(--primary));
-          height: 2px;
-        }
+
+        /* Event styles */
         .rbc-event {
-          border-radius: 4px;
-          padding: 4px 8px;
-          font-size: 13px;
-          border: none !important;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          transition: transform 0.1s ease;
+          @apply rounded px-2 py-1 text-xs border-0 shadow-sm transition-transform duration-200 ease-in-out;
         }
+
         .rbc-event:hover {
-          transform: scale(1.02);
+          @apply transform scale-[1.02];
         }
-        .rbc-toolbar {
-          display: none;
-        }
-        .rbc-month-header {
-          height: 40px;
-          display: flex;
-          align-items: center;
-          background: hsl(var(--accent) / 0.1);
-          border-bottom: 1px solid hsl(var(--border));
-        }
-        .rbc-month-header .rbc-header {
-          flex: 1;
-          text-align: center;
-          padding: 8px;
-          border-left: 1px solid hsl(var(--border) / 0.3);
-        }
-        .rbc-month-header .rbc-header:first-child {
-          border-left: none;
-        }
+
+        /* Time view styles */
         .rbc-time-view {
-          border: 1px solid hsl(var(--border));
-          border-radius: 8px;
-          overflow: hidden;
-          background: hsl(var(--background));
+          @apply border border-gray-800 rounded-lg overflow-hidden bg-[#0F172A];
         }
+
         .rbc-time-header {
-          border-bottom: 1px solid hsl(var(--border));
-          background: hsl(var(--accent) / 0.1);
+          @apply border-b border-gray-800 bg-gray-800/50;
         }
+
         .rbc-time-content {
-          border-top: 1px solid hsl(var(--border));
+          @apply border-t border-gray-800;
         }
+
         .rbc-timeslot-group {
-          border-bottom: 1px solid hsl(var(--border) / 0.2);
-          min-height: 60px;
+          @apply border-b border-gray-800/20 min-h-[60px];
         }
+
         .rbc-time-gutter {
-          font-size: 11px;
-          font-weight: 500;
-          padding: 0 8px;
-          color: hsl(var(--muted-foreground));
-          background: hsl(var(--muted) / 0.1);
+          @apply text-xs font-medium px-2 text-gray-400 bg-gray-800/20;
         }
+
         .rbc-time-slot {
-          color: hsl(var(--muted-foreground));
-          font-size: 12px;
+          @apply text-gray-400 text-xs;
         }
-        .rbc-day-slot .rbc-time-slot {
-          border-top: 1px solid hsl(var(--border) / 0.1);
+
+        /* Remove all yellow outlines and improve selection states */
+        .rbc-selected,
+        .rbc-selected-cell,
+        .rbc-day-slot .rbc-selected,
+        .rbc-day-slot .rbc-selected:focus,
+        .rbc-day-slot .rbc-selected:hover,
+        .rbc-day-slot .rbc-selected.rbc-current,
+        .rbc-day-slot .rbc-background-event,
+        .rbc-selected.rbc-background-event,
+        .rbc-day-slot .rbc-selected.rbc-background-event {
+          @apply bg-transparent outline-none ring-0 shadow-none !important;
         }
-        .rbc-time-column {
-          background: hsl(var(--background));
+
+        /* Time slot selection */
+        .rbc-time-slot.rbc-selected,
+        .rbc-time-slot:focus,
+        .rbc-time-slot:hover {
+          @apply bg-transparent outline-none !important;
         }
-        .rbc-day-slot .rbc-events-container {
-          margin-right: 1px;
+
+        /* Event selection */
+        .rbc-event.rbc-selected,
+        .rbc-event:focus {
+          @apply ring-2 ring-blue-500 ring-offset-0 !important;
         }
-        .rbc-time-view .rbc-row {
-          min-height: 40px;
+
+        /* Day selection */
+        .rbc-day-bg.rbc-selected-cell {
+          @apply bg-gray-800/40 !important;
         }
+
+        /* Remove focus outlines */
+        .rbc-calendar *:focus {
+          @apply outline-none ring-0 !important;
+        }
+
+        /* Time slot hover */
+        .rbc-time-slot:hover {
+          @apply bg-gray-800/20 !important;
+        }
+
+        /* Header selection */
+        .rbc-header.rbc-selected,
+        .rbc-header:focus {
+          @apply outline-none bg-transparent !important;
+        }
+
+        /* Current time indicator */
+        .rbc-current-time-indicator {
+          @apply bg-blue-500 h-0.5;
+        }
+
+        /* Hide toolbar */
+        .rbc-toolbar {
+          @apply hidden;
+        }
+
+        /* Show more link */
         .rbc-show-more {
-          color: hsl(var(--primary));
-          font-size: 0.875rem;
-          font-weight: 500;
-          padding: 2px 4px;
-          background: transparent;
-        }
-        .rbc-show-more:hover {
-          color: hsl(var(--primary));
-          background: hsl(var(--accent) / 0.1);
+          @apply text-blue-400 text-sm font-medium px-1 py-0.5 hover:bg-gray-800/20 rounded;
         }
       `}</style>
       <BigCalendar
@@ -251,7 +261,7 @@ export default function Calendar({
           dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
             `${format(start, 'MMMM dd')} - ${format(end, 'MMMM dd, yyyy')}`,
         }}
-        className="text-foreground"
+        className="text-gray-200"
       />
     </div>
   );

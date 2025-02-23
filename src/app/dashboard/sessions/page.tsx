@@ -4,18 +4,18 @@ import Calendar from "@/components/Calendar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import type { BookingStatus } from "@prisma/client"
@@ -186,13 +186,13 @@ export default function SessionsPage() {
           </div>
 
           <Select value={view} onValueChange={(v) => handleViewChange(v as View)}>
-            <SelectTrigger className="h-8 w-[110px] bg-card shadow-sm">
+            <SelectTrigger className="h-8 w-[110px] bg-[#0F172A] border-gray-800 text-gray-200">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="month">Month</SelectItem>
-              <SelectItem value="week">Week</SelectItem>
-              <SelectItem value="day">Day</SelectItem>
+            <SelectContent className="bg-[#0F172A] border-gray-800">
+              <SelectItem value="month" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Month</SelectItem>
+              <SelectItem value="week" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Week</SelectItem>
+              <SelectItem value="day" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Day</SelectItem>
             </SelectContent>
           </Select>
         </div>
