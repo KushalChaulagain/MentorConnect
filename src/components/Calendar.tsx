@@ -252,15 +252,6 @@ export default function Calendar({
         onView={onViewChange}
         date={date}
         onNavigate={onNavigate}
-        formats={{
-          timeGutterFormat: (date: Date) => format(date, 'HH:mm'),
-          eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) =>
-            `${format(start, 'HH:mm')} - ${format(end, 'HH:mm')}`,
-          dayFormat: (date: Date) => format(date, 'EEE'),
-          dayHeaderFormat: (date: Date) => format(date, 'EEE dd'),
-          dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
-            `${format(start, 'MMMM dd')} - ${format(end, 'MMMM dd, yyyy')}`,
-        }}
         className="text-gray-200"
       />
     </div>
