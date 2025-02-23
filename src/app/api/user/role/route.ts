@@ -1,53 +1,34 @@
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { UserRole } from '@/types';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
-import { authOptions } from '../../auth/[...nextauth]/route';
 
-const roleUpdateSchema = z.object({
-  role: z.nativeEnum(UserRole),
-});
-
-export async function PUT(req: Request) {
+export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const body = await req.json();
-    const { role } = roleUpdateSchema.parse(body);
+    const body = await request.json();
+    const { role } = body;
 
-    // Update user role
-    const user = await prisma.user.update({
-      where: { id: session.user.id },
-      data: { role },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
+    if (!role || !['MENTOR', 'MENTEE'].includes(role)) {
+      return new NextResponse('Invalid role', { status: 400 });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: session.user.id,
+      },
+      data: {
+        role,
       },
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json(updatedUser);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-
-    console.error('Failed to update user role:', error);
-    return NextResponse.json(
-      { message: 'Something went wrong' },
-      { status: 500 }
-    );
+    console.error('Error updating user role:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 } 
