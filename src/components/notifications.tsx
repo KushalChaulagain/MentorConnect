@@ -1,17 +1,16 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
 import { Bell } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Pusher from "pusher-js";
 import { useEffect, useRef, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 interface Notification {
   id: string;
@@ -206,60 +205,43 @@ export function Notifications() {
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-              {unreadCount}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold">Notifications</h3>
-        </div>
-        <ScrollArea className="h-[300px]">
-          {notifications.length > 0 ? (
-            <div className="divide-y">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors",
-                    !notification.read && "bg-gray-50 dark:bg-gray-800/30"
-                  )}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={notification.sender.image} />
-                      <AvatarFallback>
-                        {notification.sender.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium">{notification.title}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(notification.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
-              No notifications
-            </div>
-          )}
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+    <DropdownMenu>
+      <DropdownMenuTrigger className="relative">
+        <Bell className="h-5 w-5 text-gray-400 hover:text-gray-200 transition-colors" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] font-medium flex items-center justify-center bg-red-500 text-white rounded-full">
+            {unreadCount}
+          </span>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[380px]">
+        <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {notifications.length === 0 ? (
+          <div className="py-4 px-2 text-sm text-gray-400 text-center">
+            No notifications
+          </div>
+        ) : (
+          notifications.map((notification) => (
+            <DropdownMenuItem
+              key={notification.id}
+              className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+              onClick={() => handleNotificationClick(notification)}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <span className="font-medium flex-1">{notification.title}</span>
+                {!notification.read && (
+                  <span className="h-2 w-2 rounded-full bg-blue-500" />
+                )}
+              </div>
+              <p className="text-sm text-gray-400">{notification.message}</p>
+              <span className="text-xs text-gray-500">
+                {new Date(notification.timestamp).toLocaleDateString()}
+              </span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 } 

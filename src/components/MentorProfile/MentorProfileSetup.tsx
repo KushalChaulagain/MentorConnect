@@ -9,6 +9,7 @@ import { useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar"
 
 const formSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -249,15 +249,21 @@ export default function MentorProfileSetup() {
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium">{session?.user?.name || "Guest"}</span>
             <div className="relative">
-              <Avatar className="h-10 w-10 rounded-full border border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
-                     onClick={() => fileInputRef.current?.click()}>
-                <AvatarImage src={session?.user?.image || "/placeholder.svg"} alt={session?.user?.name || "User"} />
-                <AvatarFallback className="bg-gray-800">
+              <Avatar 
+                className="h-8 w-8 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <AvatarImage 
+                  src={session?.user?.image || "/placeholder.svg"} 
+                  alt={session?.user?.name || "User"}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gray-800 text-gray-200">
                   {session?.user?.name ? session.user.name.substring(0, 2).toUpperCase() : "U"}
                 </AvatarFallback>
                 {isUploading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
-                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
                   </div>
                 )}
               </Avatar>
@@ -325,7 +331,7 @@ export default function MentorProfileSetup() {
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="fullName" className="text-gray-300">
-                        Full Name
+                        Username
                       </Label>
                       <Input
                         id="fullName"

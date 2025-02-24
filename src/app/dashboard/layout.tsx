@@ -182,30 +182,39 @@ export default function DashboardLayout({
                 {session?.user ? (
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8 ring-2 ring-gray-800">
-                      {session.user.image ? (
+                      {session.user.image && !imageError ? (
                         <AvatarImage 
                           src={session.user.image}
                           alt={session.user.name || "User"}
-                          className="object-cover"
+                          className={cn(
+                            "object-cover",
+                            !imageLoaded && "animate-pulse"
+                          )}
                           onError={(e) => {
                             console.error('Image failed to load:', {
                               src: session.user.image,
-                              error: e
+                              timestamp: new Date().toISOString()
                             });
                             setImageError(true);
                           }}
-                          onLoad={() => {
-                            console.log('Image loaded successfully:', session.user.image);
+                          onLoad={(e) => {
+                            console.log('Image loaded successfully:', {
+                              src: session.user.image,
+                              naturalWidth: e.currentTarget.naturalWidth,
+                              naturalHeight: e.currentTarget.naturalHeight,
+                              timestamp: new Date().toISOString()
+                            });
+                            if (e.currentTarget.naturalWidth === 0 || e.currentTarget.naturalHeight === 0) {
+                              console.error('Image loaded but has zero dimensions');
+                              setImageError(true);
+                              return;
+                            }
                             setImageLoaded(true);
                             setImageError(false);
                           }}
+                          referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <AvatarFallback className="bg-gray-800 text-gray-200">
-                          {session.user.name ? session.user.name.slice(0, 2).toUpperCase() : 'U'}
-                        </AvatarFallback>
-                      )}
-                      {imageError && (
                         <AvatarFallback className="bg-gray-800 text-gray-200">
                           {session.user.name ? session.user.name.slice(0, 2).toUpperCase() : 'U'}
                         </AvatarFallback>

@@ -1,7 +1,6 @@
 // THIS PROJECT WILL EMPOWER NEPAL'S DEVELOPERS. LET'S F*****G GO.  
 
 export default function Home() {
-  console.log('Home page rendering'); // Add debug log
   
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">

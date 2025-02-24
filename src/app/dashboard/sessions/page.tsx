@@ -4,18 +4,18 @@ import Calendar from "@/components/Calendar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import type { BookingStatus } from "@prisma/client"
@@ -140,17 +140,17 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-6 bg-background">
-      <div className="flex items-center justify-between pb-4 border-b">
+    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-6 bg-[#0F172A]">
+      <div className="flex items-center justify-between pb-4 border-b border-gray-800">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My Sessions</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-200">My Sessions</h1>
+          <p className="text-sm text-gray-400">
             {format(date, 'MMMM yyyy')}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-md border bg-card shadow-sm">
+          <div className="flex items-center rounded-md border border-gray-800 bg-[#0F172A]">
             <Button
               variant="ghost"
               size="sm"
@@ -159,7 +159,7 @@ export default function SessionsPage() {
                 newDate.setMonth(date.getMonth() - 1);
                 handleNavigate(newDate);
               }}
-              className="h-8 w-8 p-0 rounded-none rounded-l-md"
+              className="h-8 w-8 p-0 rounded-none rounded-l-md text-gray-200 hover:bg-gray-800"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -167,7 +167,7 @@ export default function SessionsPage() {
               variant="ghost"
               size="sm"
               onClick={() => setDate(new Date())}
-              className="h-8 px-3 rounded-none border-l border-r"
+              className="h-8 px-3 rounded-none border-l border-r border-gray-800 text-gray-200 hover:bg-gray-800"
             >
               Today
             </Button>
@@ -179,26 +179,26 @@ export default function SessionsPage() {
                 newDate.setMonth(date.getMonth() + 1);
                 handleNavigate(newDate);
               }}
-              className="h-8 w-8 p-0 rounded-none rounded-r-md"
+              className="h-8 w-8 p-0 rounded-none rounded-r-md text-gray-200 hover:bg-gray-800"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
           <Select value={view} onValueChange={(v) => handleViewChange(v as View)}>
-            <SelectTrigger className="h-8 w-[110px] bg-card shadow-sm">
+            <SelectTrigger className="h-8 w-[110px] bg-[#0F172A] border-gray-800 text-gray-200">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="month">Month</SelectItem>
-              <SelectItem value="week">Week</SelectItem>
-              <SelectItem value="day">Day</SelectItem>
+            <SelectContent className="bg-[#0F172A] border-gray-800">
+              <SelectItem value="month" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Month</SelectItem>
+              <SelectItem value="week" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Week</SelectItem>
+              <SelectItem value="day" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Day</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="flex-1 rounded-lg border bg-card shadow-sm overflow-hidden">
+      <div className="flex-1 rounded-lg border border-gray-800 bg-[#0F172A] overflow-hidden">
         <Calendar
           events={calendarEvents}
           onSelectEvent={handleEventSelect}
@@ -212,32 +212,32 @@ export default function SessionsPage() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         {selectedSession && (
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] bg-[#0F172A] border-gray-800">
             <DialogHeader>
-              <DialogTitle>Session Details</DialogTitle>
+              <DialogTitle className="text-gray-200">Session Details</DialogTitle>
               <DialogDescription>
                 <div className="space-y-4 mt-4">
                   <div className="grid gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">Mentor</p>
-                    <p className="text-sm">{selectedSession.mentorProfile.user.name}</p>
+                    <p className="text-xs font-medium text-gray-400">Mentor</p>
+                    <p className="text-sm text-gray-200">{selectedSession.mentorProfile.user.name}</p>
                   </div>
                   <div className="grid gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">Mentee</p>
-                    <p className="text-sm">{selectedSession.mentee.name}</p>
+                    <p className="text-xs font-medium text-gray-400">Mentee</p>
+                    <p className="text-sm text-gray-200">{selectedSession.mentee.name}</p>
                   </div>
                   <div className="grid gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">Date</p>
-                    <p className="text-sm">{format(new Date(selectedSession.startTime), 'PPP')}</p>
+                    <p className="text-xs font-medium text-gray-400">Date</p>
+                    <p className="text-sm text-gray-200">{format(new Date(selectedSession.startTime), 'PPP')}</p>
                   </div>
                   <div className="grid gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">Time</p>
-                    <p className="text-sm">
+                    <p className="text-xs font-medium text-gray-400">Time</p>
+                    <p className="text-sm text-gray-200">
                       {format(new Date(selectedSession.startTime), 'p')} -{' '}
                       {format(new Date(selectedSession.endTime), 'p')}
                     </p>
                   </div>
                   <div className="grid gap-1">
-                    <p className="text-xs font-medium text-muted-foreground">Status</p>
+                    <p className="text-xs font-medium text-gray-400">Status</p>
                     <Badge variant={getStatusBadgeVariant(selectedSession.status)}>
                       {selectedSession.status.toLowerCase()}
                     </Badge>
@@ -247,27 +247,9 @@ export default function SessionsPage() {
                     <div className="flex gap-2 mt-6">
                       <Button
                         onClick={() => handleSessionUpdate(selectedSession.id, 'CONFIRMED')}
-                        className="flex-1"
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                       >
-                        Accept
-                      </Button>
-                      <Button
-                        onClick={() => handleSessionUpdate(selectedSession.id, 'CANCELLED')}
-                        variant="destructive"
-                        className="flex-1"
-                      >
-                        Decline
-                      </Button>
-                    </div>
-                  )}
-
-                  {selectedSession.status === 'CONFIRMED' && (
-                    <div className="flex gap-2 mt-6">
-                      <Button
-                        onClick={() => handleSessionUpdate(selectedSession.id, 'COMPLETED')}
-                        className="flex-1"
-                      >
-                        Mark as Completed
+                        Confirm
                       </Button>
                       <Button
                         onClick={() => handleSessionUpdate(selectedSession.id, 'CANCELLED')}

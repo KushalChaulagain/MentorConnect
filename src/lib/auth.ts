@@ -28,7 +28,6 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       profile(profile) {
-        console.log('Google profile:', profile); // Debug log
         return {
           id: profile.sub,
           name: profile.name,
@@ -92,7 +91,6 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        console.log('Sign in callback - user:', user); // Debug log
         const existingUser = await db.user.findUnique({
           where: { email: user.email! },
         });
