@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Briefcase, Code, Home, MessageSquare, Settings, Users } from 'lucide-react'
+import { Briefcase, Calendar, Code, Home, MessageSquare, Settings, User, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -25,6 +25,30 @@ export function DashboardSidebar() {
               <Link href="/dashboard" className="flex items-center">
                 <Home className="mr-2 h-4 w-4" />
                 Overview
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start hover:bg-white/10 ${
+                pathname.includes('/profile') ? 'bg-white/10' : ''
+              }`}
+              asChild
+            >
+              <Link href="/dashboard/profile" className="flex items-center">
+                <User className="mr-2 h-4 w-4" />
+                My Profile
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start hover:bg-white/10 ${
+                pathname.includes('/sessions') ? 'bg-white/10' : ''
+              }`}
+              asChild
+            >
+              <Link href="/dashboard/sessions" className="flex items-center">
+                <Calendar className="mr-2 h-4 w-4" />
+                Sessions
               </Link>
             </Button>
             <Button
