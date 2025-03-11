@@ -1,5 +1,6 @@
 "use client"
 
+import { AddEventDialog } from "@/components/AddEventDialog"
 import Calendar from "@/components/NewCalendar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,17 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import type { BookingStatus } from "@prisma/client"
 import { format } from "date-fns"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar as CalendarIcon } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
 
@@ -28,18 +22,17 @@ type CalendarView = 'month' | 'week' | 'day';
 
 interface Session {
   id: string
+  title: string
   startTime: string
   endTime: string
   status: BookingStatus
   mentorProfile: {
     user: {
       name: string
-      email: string
     }
   }
   mentee: {
     name: string
-    email: string
   }
 }
 
@@ -48,6 +41,8 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddEventDialogOpen, setIsAddEventDialogOpen] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | undefined>()
   const [view, setView] = useState<CalendarView>('week')
   const [date, setDate] = useState(new Date())
 
@@ -99,9 +94,36 @@ export default function SessionsPage() {
     }
   }
 
+  const handleAddEvent = async (event: { title: string; start: Date; end: Date }) => {
+    try {
+      const response = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: event.title,
+          startTime: event.start.toISOString(),
+          endTime: event.end.toISOString(),
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to create session")
+
+      await fetchSessions()
+      toast({
+        title: "Success",
+        description: "Session created successfully.",
+      })
+    } catch (error) {
+      console.error("Error creating session:", error)
+      throw error
+    }
+  }
+
   const calendarEvents = sessions.map((session) => ({
     id: session.id,
-    title: `Session with ${session.mentorProfile.user.name}`,
+    title: session.title,
     start: new Date(session.startTime),
     end: new Date(session.endTime),
     status: session.status,
@@ -115,6 +137,11 @@ export default function SessionsPage() {
       setSelectedSession(session)
       setIsDialogOpen(true)
     }
+  }
+
+  const handleSlotSelect = (slotInfo: { start: Date; end: Date }) => {
+    setSelectedSlot(slotInfo)
+    setIsAddEventDialogOpen(true)
   }
 
   const handleViewChange = (newView: CalendarView) => {
@@ -141,69 +168,27 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col gap-4 p-6 bg-[#0F172A]">
-      <div className="flex items-center justify-between pb-4 border-b border-gray-800">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-200">My Sessions</h1>
-          <p className="text-sm text-gray-400">
-            {format(date, 'MMMM yyyy')}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-md border border-gray-800 bg-[#0F172A]">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const newDate = new Date(date);
-                newDate.setMonth(date.getMonth() - 1);
-                handleNavigate(newDate);
-              }}
-              className="h-8 w-8 p-0 rounded-none rounded-l-md text-gray-200 hover:bg-gray-800"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDate(new Date())}
-              className="h-8 px-3 rounded-none border-l border-r border-gray-800 text-gray-200 hover:bg-gray-800"
-            >
-              Today
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const newDate = new Date(date);
-                newDate.setMonth(date.getMonth() + 1);
-                handleNavigate(newDate);
-              }}
-              className="h-8 w-8 p-0 rounded-none rounded-r-md text-gray-200 hover:bg-gray-800"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+    <div className="flex h-full flex-col bg-[#0B0E14]">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-[rgba(255,255,255,0.06)]">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="text-gray-400 h-5 w-5" />
+          <div>
+            <h1 className="text-lg font-medium text-white">Calendar</h1>
+            <p className="text-xs text-gray-400">
+              {format(date, "MMMM yyyy")}
+            </p>
           </div>
-
-          <Select value={view} onValueChange={(v) => handleViewChange(v as CalendarView)}>
-            <SelectTrigger className="h-8 w-[110px] bg-[#0F172A] border-gray-800 text-gray-200">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-[#0F172A] border-gray-800">
-              <SelectItem value="month" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Month</SelectItem>
-              <SelectItem value="week" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Week</SelectItem>
-              <SelectItem value="day" className="text-gray-200 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer">Day</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
-      <div className="flex-1 rounded-lg border border-gray-800 bg-[#0F172A] overflow-hidden">
+      {/* Calendar */}
+      <div className="flex-1 h-[calc(100vh-5rem)] overflow-hidden">
         <Calendar
           events={calendarEvents}
           onSelectEvent={handleEventSelect}
-          isEditable={false}
+          onSelectSlot={handleSlotSelect}
+          isEditable={true}
           view={view}
           onViewChange={handleViewChange}
           date={date}
@@ -211,63 +196,115 @@ export default function SessionsPage() {
         />
       </div>
 
+      {/* Session details dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        {selectedSession && (
-          <DialogContent className="sm:max-w-[425px] bg-[#0F172A] border-gray-800">
-            <DialogHeader>
-              <DialogTitle className="text-gray-200">Session Details</DialogTitle>
-              <DialogDescription>
-                <div className="space-y-4 mt-4">
-                  <div className="grid gap-1">
-                    <p className="text-xs font-medium text-gray-400">Mentor</p>
-                    <p className="text-sm text-gray-200">{selectedSession.mentorProfile.user.name}</p>
-                  </div>
-                  <div className="grid gap-1">
-                    <p className="text-xs font-medium text-gray-400">Mentee</p>
-                    <p className="text-sm text-gray-200">{selectedSession.mentee.name}</p>
-                  </div>
-                  <div className="grid gap-1">
-                    <p className="text-xs font-medium text-gray-400">Date</p>
-                    <p className="text-sm text-gray-200">{format(new Date(selectedSession.startTime), 'PPP')}</p>
-                  </div>
-                  <div className="grid gap-1">
-                    <p className="text-xs font-medium text-gray-400">Time</p>
-                    <p className="text-sm text-gray-200">
-                      {format(new Date(selectedSession.startTime), 'p')} -{' '}
-                      {format(new Date(selectedSession.endTime), 'p')}
-                    </p>
-                  </div>
-                  <div className="grid gap-1">
-                    <p className="text-xs font-medium text-gray-400">Status</p>
-                    <Badge variant={getStatusBadgeVariant(selectedSession.status)}>
-                      {selectedSession.status.toLowerCase()}
-                    </Badge>
-                  </div>
+        <DialogContent className="bg-[#0B0E14] border-0 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Session Details</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              View and manage session information
+            </DialogDescription>
+          </DialogHeader>
 
-                  {selectedSession.status === 'PENDING' && (
-                    <div className="flex gap-2 mt-6">
-                      <Button
-                        onClick={() => handleSessionUpdate(selectedSession.id, 'CONFIRMED')}
-                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        onClick={() => handleSessionUpdate(selectedSession.id, 'CANCELLED')}
-                        variant="destructive"
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
+          {selectedSession && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-xs text-gray-400 mb-1">Title</h3>
+                <p className="text-sm">{selectedSession.title}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-xs text-gray-400 mb-1">Start Time</h3>
+                  <p className="text-sm">
+                    {format(new Date(selectedSession.startTime), "PPp")}
+                  </p>
                 </div>
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        )}
+                <div>
+                  <h3 className="text-xs text-gray-400 mb-1">End Time</h3>
+                  <p className="text-sm">
+                    {format(new Date(selectedSession.endTime), "PPp")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-xs text-gray-400 mb-1">Mentor</h3>
+                  <p className="text-sm">{selectedSession.mentorProfile.user.name}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs text-gray-400 mb-1">Mentee</h3>
+                  <p className="text-sm">{selectedSession.mentee.name}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs text-gray-400 mb-1">Status</h3>
+                <div>
+                  <Badge variant={getStatusBadgeVariant(selectedSession.status)}>
+                    {selectedSession.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(255,255,255,0.06)]">
+                {selectedSession.status === "PENDING" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        handleSessionUpdate(selectedSession.id, "CANCELLED")
+                      }
+                      className="border-red-500 text-red-500 hover:bg-red-500/10"
+                    >
+                      Decline
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        handleSessionUpdate(selectedSession.id, "CONFIRMED")
+                      }
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Confirm
+                    </Button>
+                  </>
+                )}
+                {selectedSession.status === "CONFIRMED" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        handleSessionUpdate(selectedSession.id, "CANCELLED")
+                      }
+                      className="border-red-500 text-red-500 hover:bg-red-500/10"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        handleSessionUpdate(selectedSession.id, "COMPLETED")
+                      }
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Complete
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
       </Dialog>
+
+      {/* Add event dialog */}
+      <AddEventDialog
+        isOpen={isAddEventDialogOpen}
+        onClose={() => setIsAddEventDialogOpen(false)}
+        selectedSlot={selectedSlot}
+        onEventAdd={handleAddEvent}
+      />
     </div>
-  )
+  );
 }
 
