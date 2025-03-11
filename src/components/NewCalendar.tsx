@@ -2,13 +2,17 @@ import { BookingStatus } from '@prisma/client';
 import { addDays, format, getWeek, isSameDay, isSameMonth, isToday, startOfMonth, startOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AvailabilityDisplay, AvailabilitySlot } from './AvailabilityDisplay';
+
+// Extend BookingStatus to include AVAILABLE
+type ExtendedBookingStatus = BookingStatus | 'AVAILABLE';
 
 interface CalendarEvent {
   id: string;
   title: string;
   start: Date;
   end: Date;
-  status: BookingStatus;
+  status: ExtendedBookingStatus;
   mentorName?: string;
   menteeName?: string;
 }
@@ -22,9 +26,11 @@ interface CalendarProps {
   onViewChange?: (view: 'month' | 'week' | 'day') => void;
   date?: Date;
   onNavigate?: (date: Date) => void;
+  mentorProfileId?: string;
+  showAvailability?: boolean;
 }
 
-const getEventColor = (status: BookingStatus) => {
+const getEventColor = (status: ExtendedBookingStatus) => {
   switch (status) {
     case 'PENDING':
       return 'bg-yellow-500';
@@ -34,6 +40,8 @@ const getEventColor = (status: BookingStatus) => {
       return 'bg-blue-500';
     case 'CANCELLED':
       return 'bg-red-500';
+    case 'AVAILABLE':
+      return 'bg-gray-600/50';
     default:
       return 'bg-gray-500';
   }
@@ -53,10 +61,13 @@ export default function Calendar({
   onViewChange,
   date = new Date(),
   onNavigate,
+  mentorProfileId,
+  showAvailability = false,
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(date);
   const [currentView, setCurrentView] = useState(view);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
+  const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
   
   useEffect(() => {
     setCurrentDate(date);
@@ -186,6 +197,23 @@ export default function Calendar({
     </div>
   );
 
+  // Handle availability data
+  const handleAvailabilityLoaded = (slots: AvailabilitySlot[]) => {
+    setAvailabilitySlots(slots);
+  };
+  
+  // Create availability events
+  const availabilityEvents = showAvailability && mentorProfileId ? availabilitySlots.map(slot => ({
+    id: slot.id,
+    title: 'Available',
+    start: slot.date as Date,
+    end: new Date((slot.date as Date).getTime() + (60 * 60 * 1000)), // 1 hour slots
+    status: 'AVAILABLE' as ExtendedBookingStatus,
+  })) : [];
+  
+  // Combine regular events with availability slots
+  const combinedEvents = [...events, ...availabilityEvents];
+
   // WEEK VIEW
   if (currentView === 'week') {
     // Generate days for the week
@@ -196,7 +224,7 @@ export default function Calendar({
     const weekNumber = getWeek(currentDate);
 
     // Filter events for the current week
-    const weekEvents = events.filter(event => {
+    const weekEvents = combinedEvents.filter(event => {
       const eventDate = new Date(event.start);
       const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
       const weekEnd = addDays(weekStart, 6);
@@ -222,6 +250,13 @@ export default function Calendar({
 
     return (
       <div className="flex flex-col h-full bg-[#0B0E14] text-white">
+        {showAvailability && mentorProfileId && (
+          <AvailabilityDisplay 
+            mentorProfileId={mentorProfileId}
+            onAvailabilityLoaded={handleAvailabilityLoaded}
+          />
+        )}
+        
         <CalendarHeader />
         
         {/* Calendar container */}
@@ -271,7 +306,8 @@ export default function Calendar({
                             className={`absolute inset-0 m-0.5 p-1 text-xs rounded ${getEventColor(event.status)} text-white overflow-hidden`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onSelectEvent) onSelectEvent(event);
+                              if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
+                              else if (event.status === 'AVAILABLE') handleSlotClick(day, hourIndex);
                             }}
                           >
                             {event.title}
@@ -296,7 +332,7 @@ export default function Calendar({
   // DAY VIEW
   if (currentView === 'day') {
     // Filter events for the current day
-    const dayEvents = events.filter(event => {
+    const dayEvents = combinedEvents.filter(event => {
       const eventDate = new Date(event.start);
       return isSameDay(eventDate, currentDate);
     });
@@ -316,6 +352,13 @@ export default function Calendar({
 
     return (
       <div className="flex flex-col h-full bg-[#0B0E14] text-white">
+        {showAvailability && mentorProfileId && (
+          <AvailabilityDisplay 
+            mentorProfileId={mentorProfileId}
+            onAvailabilityLoaded={handleAvailabilityLoaded}
+          />
+        )}
+        
         <CalendarHeader />
         
         {/* Calendar container */}
@@ -354,7 +397,8 @@ export default function Calendar({
                           className={`absolute inset-0 m-0.5 p-1 text-xs rounded ${getEventColor(event.status)} text-white overflow-hidden flex items-center`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (onSelectEvent) onSelectEvent(event);
+                            if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
+                            else if (event.status === 'AVAILABLE') handleSlotClick(currentDate, hourIndex);
                           }}
                         >
                           <span className="mr-2">{format(event.start, 'HH:mm')}</span>
@@ -393,7 +437,7 @@ export default function Calendar({
     }
     
     // Get all events for the displayed days
-    const monthEvents = events.filter(event => {
+    const monthEvents = combinedEvents.filter(event => {
       const eventDate = new Date(event.start);
       return eventDate >= startDate && eventDate <= days[days.length - 1];
     });
@@ -413,6 +457,13 @@ export default function Calendar({
     
     return (
       <div className="flex flex-col h-full bg-[#0B0E14] text-white">
+        {showAvailability && mentorProfileId && (
+          <AvailabilityDisplay 
+            mentorProfileId={mentorProfileId}
+            onAvailabilityLoaded={handleAvailabilityLoaded}
+          />
+        )}
+        
         <CalendarHeader />
         
         {/* Calendar container */}
@@ -463,7 +514,8 @@ export default function Calendar({
                             className={`text-xs p-1 rounded ${getEventColor(event.status)} text-white truncate`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onSelectEvent) onSelectEvent(event);
+                              if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
+                              else if (event.status === 'AVAILABLE') handleSlotClick(day);
                             }}
                           >
                             {format(event.start, 'HH:mm')} {event.title}

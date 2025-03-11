@@ -139,14 +139,21 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       console.log('Session callback - token:', token); // Debug log
+      
+      // Check if token properties exist before assigning them
+      if (!token) {
+        console.log('Warning: token is undefined in session callback');
+        return session;
+      }
+      
       return {
         ...session,
         user: {
           ...session.user,
-          id: token.id as string,
-          role: token.role as Role,
-          image: token.image as string,
-          onboardingCompleted: token.onboardingCompleted as boolean,
+          id: typeof token.id === 'string' ? token.id : "",
+          role: token.role as Role || "MENTEE",
+          image: typeof token.image === 'string' ? token.image : "",
+          onboardingCompleted: typeof token.onboardingCompleted === 'boolean' ? token.onboardingCompleted : false,
         },
       };
     },

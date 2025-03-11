@@ -45,9 +45,12 @@ export default function SessionsPage() {
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | undefined>()
   const [view, setView] = useState<CalendarView>('week')
   const [date, setDate] = useState(new Date())
+  const [mentorProfileId, setMentorProfileId] = useState<string | undefined>()
+  const [showAvailability, setShowAvailability] = useState(false)
 
   useEffect(() => {
     fetchSessions()
+    fetchMentorProfile()
   }, [])
 
   const fetchSessions = async () => {
@@ -63,6 +66,25 @@ export default function SessionsPage() {
         description: "Failed to load sessions. Please try again.",
         variant: "destructive",
       })
+    }
+  }
+
+  const fetchMentorProfile = async () => {
+    try {
+      const response = await fetch("/api/profile/mentor")
+      if (!response.ok) {
+        if (response.status !== 404) {
+          throw new Error("Failed to fetch mentor profile")
+        }
+        return // User doesn't have a mentor profile
+      }
+      
+      const data = await response.json()
+      setMentorProfileId(data.id)
+      // Only show availability in your own calendar if you're a mentor
+      setShowAvailability(!!data.id)
+    } catch (error) {
+      console.error("Error fetching mentor profile:", error)
     }
   }
 
@@ -180,6 +202,19 @@ export default function SessionsPage() {
             </p>
           </div>
         </div>
+        
+        {mentorProfileId && (
+          <div className="flex items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAvailability(!showAvailability)}
+              className={`text-xs border-[rgba(255,255,255,0.2)] ${showAvailability ? 'bg-blue-500/20 text-blue-400' : 'bg-transparent'}`}
+            >
+              {showAvailability ? 'Hide Availability' : 'Show Availability'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Calendar */}
@@ -193,6 +228,8 @@ export default function SessionsPage() {
           onViewChange={handleViewChange}
           date={date}
           onNavigate={handleNavigate}
+          mentorProfileId={mentorProfileId}
+          showAvailability={showAvailability}
         />
       </div>
 

@@ -73,4 +73,40 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+}
+
+// Add GET handler to fetch mentor profile
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json(
+        { message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user already has a mentor profile
+    const existingProfile = await prisma.mentorProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+
+    if (!existingProfile) {
+      console.log("No mentor profile found for user:", session.user.id);
+      return NextResponse.json(
+        { message: 'Mentor profile not found' },
+        { status: 404 }
+      );
+    }
+
+    // Return the mentor profile
+    return NextResponse.json(existingProfile);
+  } catch (error) {
+    console.error('Failed to fetch mentor profile:', error);
+    return NextResponse.json(
+      { message: 'Something went wrong' },
+      { status: 500 }
+    );
+  }
 } 
