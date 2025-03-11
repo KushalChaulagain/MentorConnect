@@ -1,6 +1,6 @@
 "use client"
 
-import Calendar from "@/components/Calendar"
+import Calendar from "@/components/NewCalendar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,7 +23,8 @@ import { format } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
-import { View } from 'react-big-calendar'
+
+type CalendarView = 'month' | 'week' | 'day';
 
 interface Session {
   id: string
@@ -47,7 +48,7 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [view, setView] = useState<View>('week')
+  const [view, setView] = useState<CalendarView>('week')
   const [date, setDate] = useState(new Date())
 
   useEffect(() => {
@@ -116,7 +117,7 @@ export default function SessionsPage() {
     }
   }
 
-  const handleViewChange = (newView: View) => {
+  const handleViewChange = (newView: CalendarView) => {
     setView(newView)
   }
 
@@ -185,7 +186,7 @@ export default function SessionsPage() {
             </Button>
           </div>
 
-          <Select value={view} onValueChange={(v) => handleViewChange(v as View)}>
+          <Select value={view} onValueChange={(v) => handleViewChange(v as CalendarView)}>
             <SelectTrigger className="h-8 w-[110px] bg-[#0F172A] border-gray-800 text-gray-200">
               <SelectValue />
             </SelectTrigger>
@@ -203,8 +204,8 @@ export default function SessionsPage() {
           events={calendarEvents}
           onSelectEvent={handleEventSelect}
           isEditable={false}
-          view={view as View}
-          onViewChange={(view: string) => handleViewChange(view as View)}
+          view={view}
+          onViewChange={handleViewChange}
           date={date}
           onNavigate={handleNavigate}
         />

@@ -2,13 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import AgoraRTC, {
-  IAgoraRTCClient,
-  IAgoraRTCRemoteUser,
-  ICameraVideoTrack,
-  ILocalVideoTrack,
-  IMicrophoneAudioTrack
-} from 'agora-rtc-sdk-ng';
+import AgoraRTC, { ILocalVideoTrack, IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
 import { Expand, Mic, MicOff, Monitor, PhoneOff, Signal, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -27,19 +21,11 @@ interface CallStats {
   latency: number;
 }
 
-const client: IAgoraRTCClient = AgoraRTC.createClient({
-  mode: 'rtc',
-  codec: 'vp8',
-});
-
-// Disable Agora logging
-AgoraRTC.setLogLevel(4);
-AgoraRTC.disableLogUpload();
-
 export function CallInterface({ channelName, isVideo, onEndCall }: CallInterfaceProps) {
+  const [client, setClient] = useState<any>(null);
   const [localTracks, setLocalTracks] = useState<{
-    audioTrack?: IMicrophoneAudioTrack;
-    videoTrack?: ICameraVideoTrack;
+    audioTrack?: IAgoraRTCRemoteUser['audioTrack'];
+    videoTrack?: IAgoraRTCRemoteUser['videoTrack'];
   }>({});
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -58,6 +44,26 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   const [isConnected, setIsConnected] = useState(false);
   const durationIntervalRef = useRef<NodeJS.Timeout>();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Agora client
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const agoraClient = AgoraRTC.createClient({
+          mode: 'rtc',
+          codec: 'vp8',
+        });
+        
+        // Disable Agora logging
+        AgoraRTC.setLogLevel(4);
+        AgoraRTC.disableLogUpload();
+        
+        setClient(agoraClient);
+      }
+    } catch (error) {
+      console.error('Error initializing Agora client:', error);
+    }
+  }, []);
 
   // Call duration timer
   useEffect(() => {
@@ -158,11 +164,13 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
   };
 
   useEffect(() => {
+    if (!client) return;
+
     mountedRef.current = true;
     let initTimeout: NodeJS.Timeout;
 
     const initCall = async () => {
-      if (initializingRef.current || !mountedRef.current) return;
+      if (initializingRef.current || !mountedRef.current || !client) return;
       initializingRef.current = true;
 
       try {
@@ -351,16 +359,16 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
       }
     };
 
-    // Initialize the call
-    initCall().catch(console.error);
+    if (client) {
+      initCall();
+    }
 
-    // Enhanced cleanup
     return () => {
       mountedRef.current = false;
       clearTimeout(initTimeout);
       cleanup().catch(console.error);
     };
-  }, [channelName, isVideo]);
+  }, [client]);
 
   const toggleAudio = async () => {
     if (localTracks.audioTrack) {
