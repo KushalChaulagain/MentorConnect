@@ -5,10 +5,16 @@ import {
     DialogContent,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import dynamic from 'next/dynamic';
 import Pusher from 'pusher-js';
 import { useEffect, useRef, useState } from "react";
-import { CallInterface } from "./CallInterface";
 import { CallingOverlay } from "./CallingOverlay";
+
+// Dynamic import of CallInterface to avoid SSR issues
+const CallInterface = dynamic(() => import("./CallInterface").then(mod => mod.CallInterface), {
+  ssr: false,
+  loading: () => <div>Loading call interface...</div>
+});
 
 interface CallDialogProps {
   isOpen: boolean;
