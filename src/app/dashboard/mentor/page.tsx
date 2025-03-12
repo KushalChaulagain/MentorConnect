@@ -9,19 +9,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
-    ArrowRight,
-    ArrowUpRight,
-    Calendar,
-    CheckCircle2,
-    ChevronRight,
-    Clock,
-    DollarSign,
-    MessageSquare,
-    MoreHorizontal,
-    Star,
-    Timer,
-    User,
-    Users
+  ArrowRight,
+  ArrowUpRight,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  DollarSign,
+  MessageSquare,
+  MoreHorizontal,
+  Star,
+  Timer,
+  User,
+  Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -236,40 +236,54 @@ export default function MentorDashboard() {
               </Link>
             </div>
           </div>
-          <div className="hidden lg:block">
-            <div className="flex flex-col items-center p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <div className="text-white text-xl font-semibold mb-2">Profile Completion</div>
-              <div className="w-32 h-32 relative flex items-center justify-center mb-2">
-                <svg className="w-full h-full" viewBox="0 0 100 100">
-                  {/* Background circle */}
-                  <circle 
-                    cx="50" cy="50" r="45" 
-                    fill="none" 
-                    stroke="rgba(255,255,255,0.2)" 
-                    strokeWidth="10" 
-                  />
-                  {/* Progress circle */}
-                  <circle 
-                    cx="50" cy="50" r="45" 
-                    fill="none" 
-                    stroke="white" 
-                    strokeWidth="10" 
-                    strokeDasharray={`${2 * Math.PI * 45 * stats.profileCompleteness / 100} ${2 * Math.PI * 45 * (1 - stats.profileCompleteness / 100)}`}
-                    strokeDashoffset={2 * Math.PI * 45 * 0.25}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute text-white text-2xl font-bold">
-                  {stats.profileCompleteness}%
+          
+          {/* Only show profile completion widget if not 100% complete */}
+          {stats.profileCompleteness < 100 && (
+            <div className="hidden lg:block">
+              <div className="flex flex-col items-center p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <div className="text-white text-xl font-semibold mb-2">Profile Completion</div>
+                <div className="w-32 h-32 relative flex items-center justify-center mb-2">
+                  <svg className="w-full h-full" viewBox="0 0 100 100">
+                    {/* Background circle */}
+                    <circle 
+                      cx="50" cy="50" r="45" 
+                      fill="none" 
+                      stroke="rgba(255,255,255,0.2)" 
+                      strokeWidth="10" 
+                    />
+                    {/* Progress circle */}
+                    <circle 
+                      cx="50" cy="50" r="45" 
+                      fill="none" 
+                      stroke="white" 
+                      strokeWidth="10" 
+                      strokeDasharray={`${2 * Math.PI * 45 * stats.profileCompleteness / 100} ${2 * Math.PI * 45 * (1 - stats.profileCompleteness / 100)}`}
+                      strokeDashoffset={2 * Math.PI * 45 * 0.25}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute text-white text-2xl font-bold">
+                    {stats.profileCompleteness}%
+                  </div>
                 </div>
+                <Link href="/dashboard/profile">
+                  <Button variant="link" className="text-white hover:text-indigo-100 p-0">
+                    Complete Your Profile
+                  </Button>
+                </Link>
               </div>
-              <Link href="/dashboard/profile">
-                <Button variant="link" className="text-white hover:text-indigo-100 p-0">
-                  Complete Your Profile
-                </Button>
-              </Link>
             </div>
-          </div>
+          )}
+          
+          {/* Show a badge when profile is 100% complete */}
+          {stats.profileCompleteness === 100 && (
+            <div className="hidden lg:flex items-center p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+              <Badge className="bg-green-500/70 hover:bg-green-500/80 py-2 px-3 text-white flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4" />
+                Verified Mentor
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
       

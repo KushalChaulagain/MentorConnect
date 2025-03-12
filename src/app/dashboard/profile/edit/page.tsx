@@ -66,6 +66,14 @@ const formSchema = z.object({
   timezone: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0).optional(),
   skills: z.array(z.string()).optional(),
+  // Added for mentees
+  learningGoals: z.string().optional(),
+  skillLevel: z.string().optional(),
+  areasOfInterest: z.string().optional(),
+  learningStyle: z.string().optional(),
+  careerGoals: z.string().optional(),
+  currentChallenges: z.string().optional(),
+  education: z.string().optional(),
 });
 
 // Define interface for our form values
@@ -82,6 +90,7 @@ export default function EditProfilePage() {
   const [newSkill, setNewSkill] = useState("");
   const [formData, setFormData] = useState<Partial<FormValues>>({});
   const [profileFetched, setProfileFetched] = useState(false);
+  const [userRole, setUserRole] = useState<"mentor" | "mentee" | null>(null);
   
   // Create form
   const form = useForm<FormValues>({
@@ -98,6 +107,14 @@ export default function EditProfilePage() {
       timezone: "",
       yearsOfExperience: 0,
       skills: [],
+      // Added for mentees
+      learningGoals: "",
+      skillLevel: "",
+      areasOfInterest: "",
+      learningStyle: "",
+      careerGoals: "",
+      currentChallenges: "",
+      education: "",
     },
     // Important: This prevents form reset when tab changes
     mode: "onChange"
@@ -121,7 +138,7 @@ export default function EditProfilePage() {
     return () => clearTimeout(timeoutId);
   }, [form]);
   
-  // Memoize fetchProfile to prevent unnecessary refetches
+  // Replace the fetchProfile function with the updated version
   const fetchProfile = useCallback(async () => {
     // Skip fetching if we've already loaded the profile
     if (profileFetched && !loading) {
@@ -179,7 +196,18 @@ export default function EditProfilePage() {
         timezone: savedTimezone || profileData.timezone || "",
         yearsOfExperience: profileData.yearsOfExperience || 0,
         skills: profileData.skills || [],
+        // Include mentee-specific fields
+        learningGoals: profileData.learningGoals || "",
+        skillLevel: profileData.skillLevel || "",
+        areasOfInterest: profileData.areasOfInterest || "",
+        learningStyle: profileData.learningStyle || "",
+        careerGoals: profileData.careerGoals || "",
+        currentChallenges: profileData.currentChallenges || "",
+        education: profileData.education || "",
       });
+      
+      // Log form values after reset for debugging
+      console.log("Form values after reset:", form.getValues());
       
       // Mark as fetched to prevent unnecessary refreshes
       setProfileFetched(true);
@@ -191,7 +219,25 @@ export default function EditProfilePage() {
     }
   }, [form, profileFetched, loading]);
   
-  // Modify the page effect to manage window focus events
+  // Add after fetchProfile function
+  const fetchUserRole = async () => {
+    try {
+      const response = await fetch('/api/user-role');
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role);
+      } else {
+        // Default to mentee if role can't be determined
+        setUserRole("mentee");
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      // Default to mentee if there's an error
+      setUserRole("mentee");
+    }
+  };
+  
+  // Replace the useEffect that fetches profile data
   useEffect(() => {
     if (status === "loading") return;
     
@@ -200,8 +246,13 @@ export default function EditProfilePage() {
       return;
     }
     
-    // Fetch profile initially
-    fetchProfile();
+    // First fetch the user role
+    const fetchAndSetup = async () => {
+      await fetchUserRole();
+      await fetchProfile();
+    };
+    
+    fetchAndSetup();
     
     // Disable auto-refresh on focus
     const disableAutoRefresh = () => {
@@ -257,17 +308,28 @@ export default function EditProfilePage() {
     form.setValue('skills', updatedSkills);
   };
   
-  // Handle form submission
+  // Update onSubmit to add logging for every field and fix saving logic
   const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      
       // Log all state for debugging
       console.log("--- FORM SUBMISSION ---");
       console.log("Form values:", values);
       console.log("Saved form data:", formData);
       console.log("Skills:", skills);
       console.log("Timezone:", values.timezone);
+      
+      // Debug logging for mentee fields
+      console.log("Mentee Fields:", {
+        learningGoals: values.learningGoals,
+        skillLevel: values.skillLevel,
+        areasOfInterest: values.areasOfInterest,
+        learningStyle: values.learningStyle,
+        careerGoals: values.careerGoals,
+        currentChallenges: values.currentChallenges,
+        education: values.education,
+      });
       
       // Get current values from all tabs
       const currentValues = form.getValues();
@@ -311,18 +373,26 @@ export default function EditProfilePage() {
       
       // Create a complete profile update object with all fields
       const completeFormData = {
-        name: values.name || formData.name || "",
-        title: values.title || formData.title || "",
-        bio: values.bio || formData.bio || "",
-        location: values.location || formData.location || "",
-        company: values.company || formData.company || "",
-        website: values.website || formData.website || "",
-        githubUrl: values.githubUrl || formData.githubUrl || "",
-        linkedinUrl: values.linkedinUrl || formData.linkedinUrl || "",
-        timezone: values.timezone || formData.timezone || "",
-        yearsOfExperience: values.yearsOfExperience || formData.yearsOfExperience || 0,
-        skills: skills.length > 0 ? skills : (formData.skills || []),
+        name: values.name,
+        title: values.title || "",
+        bio: values.bio || "",
+        location: values.location || "",
+        company: values.company || "",
+        website: values.website || "",
+        githubUrl: values.githubUrl || "",
+        linkedinUrl: values.linkedinUrl || "",
+        timezone: values.timezone || "",
+        yearsOfExperience: values.yearsOfExperience || 0,
+        skills: skills.length > 0 ? skills : [],
         ...(imageUrl && { image: imageUrl }),
+        // Always include mentee fields regardless of role
+        learningGoals: values.learningGoals || "",
+        skillLevel: values.skillLevel || "",
+        areasOfInterest: values.areasOfInterest || "",
+        learningStyle: values.learningStyle || "",
+        careerGoals: values.careerGoals || "",
+        currentChallenges: values.currentChallenges || "",
+        education: values.education || "",
       };
       
       console.log("Complete form data being sent:", completeFormData);
@@ -349,8 +419,10 @@ export default function EditProfilePage() {
       // Refresh the profile data
       fetchProfile();
       
-      // Redirect to profile page
-      router.push("/dashboard/profile");
+      // Redirect to profile page after a small delay to ensure data is refreshed
+      setTimeout(() => {
+        router.push("/dashboard/profile");
+      }, 500);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update profile");
@@ -415,7 +487,11 @@ export default function EditProfilePage() {
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="grid grid-cols-3 w-full max-w-md">
               <TabsTrigger value="general" type="button" onClick={(e) => e.preventDefault()}>General</TabsTrigger>
-              <TabsTrigger value="professional" type="button" onClick={(e) => e.preventDefault()}>Professional</TabsTrigger>
+              {userRole === "mentor" ? (
+                <TabsTrigger value="professional" type="button" onClick={(e) => e.preventDefault()}>Professional</TabsTrigger>
+              ) : (
+                <TabsTrigger value="learning" type="button" onClick={(e) => e.preventDefault()}>Learning</TabsTrigger>
+              )}
               <TabsTrigger value="social" type="button" onClick={(e) => e.preventDefault()}>Social Links</TabsTrigger>
             </TabsList>
             
@@ -584,118 +660,369 @@ export default function EditProfilePage() {
             </TabsContent>
             
             {/* Professional Tab */}
-            <TabsContent value="professional">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Professional Details</CardTitle>
-                  <CardDescription>Update your professional information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company/Organization</FormLabel>
-                          <FormControl>
-                            <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
-                              <div className="px-3 text-muted-foreground">
-                                <Building size={16} />
+            {userRole === "mentor" && (
+              <TabsContent value="professional">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Professional Details</CardTitle>
+                    <CardDescription>Update your professional information</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company/Organization</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+                                <div className="px-3 text-muted-foreground">
+                                  <Building size={16} />
+                                </div>
+                                <Input 
+                                  placeholder="Your company or organization" 
+                                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                                  {...field} 
+                                />
                               </div>
-                              <Input 
-                                placeholder="Your company or organization" 
-                                className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
-                                {...field} 
-                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="yearsOfExperience"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Years of Experience</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+                                <div className="px-3 text-muted-foreground">
+                                  <Briefcase size={16} />
+                                </div>
+                                <Input 
+                                  type="number"
+                                  min={0}
+                                  placeholder="Years of experience" 
+                                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <FormItem>
+                        <FormLabel>Skills</FormLabel>
+                        <div className="flex flex-wrap gap-2 p-2 border rounded-md mb-2 min-h-[80px]">
+                          {skills.map((skill, index) => (
+                            <div 
+                              key={index}
+                              className="bg-muted px-3 py-1 rounded-full text-sm flex items-center"
+                            >
+                              {skill}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSkill(skill)}
+                                className="ml-2 text-muted-foreground hover:text-foreground"
+                              >
+                                ×
+                              </button>
                             </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                          ))}
+                          {skills.length === 0 && (
+                            <p className="text-sm text-muted-foreground p-2">
+                              No skills added yet
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Input
+                            value={newSkill}
+                            onChange={(e) => setNewSkill(e.target.value)}
+                            placeholder="Add a skill (e.g. React, Python)"
+                            className="flex-1"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddSkill();
+                              }
+                            }}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={handleAddSkill}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                        <FormDescription>
+                          Add skills that showcase your expertise
+                        </FormDescription>
+                      </FormItem>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+            
+            {/* Learning Tab */}
+            {userRole === "mentee" && (
+              <TabsContent value="learning">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Learning Information</CardTitle>
+                    <CardDescription>Update your learning preferences and goals</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="skillLevel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Current Skill Level</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your skill level" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="beginner">Beginner</SelectItem>
+                                <SelectItem value="intermediate">Intermediate</SelectItem>
+                                <SelectItem value="advanced">Advanced</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Your current programming skill level
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="learningStyle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Learning Style</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your learning style" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="visual">Visual Learner</SelectItem>
+                                <SelectItem value="practical">Project-Based</SelectItem>
+                                <SelectItem value="theoretical">Theoretical</SelectItem>
+                                <SelectItem value="pair">Pair Programming</SelectItem>
+                                <SelectItem value="self-guided">Self-Guided</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              How you prefer to learn new concepts
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
                     <FormField
                       control={form.control}
-                      name="yearsOfExperience"
+                      name="areasOfInterest"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Years of Experience</FormLabel>
-                          <FormControl>
-                            <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
-                              <div className="px-3 text-muted-foreground">
-                                <Briefcase size={16} />
-                              </div>
-                              <Input 
-                                type="number"
-                                min={0}
-                                placeholder="Years of experience" 
-                                className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
-                                {...field} 
-                              />
-                            </div>
-                          </FormControl>
+                          <FormLabel>Areas of Interest</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your main area of interest" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="frontend">Frontend Development</SelectItem>
+                              <SelectItem value="backend">Backend Development</SelectItem>
+                              <SelectItem value="fullstack">Full-Stack Development</SelectItem>
+                              <SelectItem value="mobile">Mobile Development</SelectItem>
+                              <SelectItem value="devops">DevOps & Cloud</SelectItem>
+                              <SelectItem value="data">Data Science & ML</SelectItem>
+                              <SelectItem value="gamedev">Game Development</SelectItem>
+                              <SelectItem value="blockchain">Blockchain & Web3</SelectItem>
+                              <SelectItem value="cybersecurity">Cybersecurity</SelectItem>
+                              <SelectItem value="ui_ux">UI/UX Design</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Your primary area of interest in tech
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <FormItem>
-                      <FormLabel>Skills</FormLabel>
-                      <div className="flex flex-wrap gap-2 p-2 border rounded-md mb-2 min-h-[80px]">
-                        {skills.map((skill, index) => (
-                          <div 
-                            key={index}
-                            className="bg-muted px-3 py-1 rounded-full text-sm flex items-center"
+
+                    <FormField
+                      control={form.control}
+                      name="learningGoals"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Learning Goals</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
                           >
-                            {skill}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSkill(skill)}
-                              className="ml-2 text-muted-foreground hover:text-foreground"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        {skills.length === 0 && (
-                          <p className="text-sm text-muted-foreground p-2">
-                            No skills added yet
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Input
-                          value={newSkill}
-                          onChange={(e) => setNewSkill(e.target.value)}
-                          placeholder="Add a skill (e.g. React, Python)"
-                          className="flex-1"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddSkill();
-                            }
-                          }}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="outline"
-                          onClick={handleAddSkill}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      <FormDescription>
-                        Add skills that showcase your expertise
-                      </FormDescription>
-                    </FormItem>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your primary learning goal" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="career_change">Career Change into Tech</SelectItem>
+                              <SelectItem value="skill_improvement">Improve Current Skills</SelectItem>
+                              <SelectItem value="new_tech">Learn New Technologies</SelectItem>
+                              <SelectItem value="project_help">Complete Specific Project</SelectItem>
+                              <SelectItem value="interview_prep">Interview Preparation</SelectItem>
+                              <SelectItem value="entrepreneurship">Launch Tech Business</SelectItem>
+                              <SelectItem value="certification">Prepare for Certification</SelectItem>
+                              <SelectItem value="promotion">Prepare for Promotion</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Your primary goal for seeking mentorship
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="careerGoals"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Career Goals</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your career goal" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="junior_developer">Become Junior Developer</SelectItem>
+                              <SelectItem value="mid_level">Reach Mid-Level Developer</SelectItem>
+                              <SelectItem value="senior_developer">Become Senior Developer</SelectItem>
+                              <SelectItem value="tech_lead">Become Tech Lead</SelectItem>
+                              <SelectItem value="engineering_manager">Engineering Management</SelectItem>
+                              <SelectItem value="startup_founder">Start My Own Company</SelectItem>
+                              <SelectItem value="freelancer">Become Freelancer</SelectItem>
+                              <SelectItem value="specialized_role">Specialize in Niche Area</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Where you want your career to go in the future
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="currentChallenges"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Challenges</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your biggest challenge" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="technical_skills">Technical Skills Gap</SelectItem>
+                              <SelectItem value="project_structure">Project Organization</SelectItem>
+                              <SelectItem value="code_quality">Improving Code Quality</SelectItem>
+                              <SelectItem value="debugging">Debugging Complex Issues</SelectItem>
+                              <SelectItem value="career_advancement">Career Advancement</SelectItem>
+                              <SelectItem value="job_search">Finding a Job/Internship</SelectItem>
+                              <SelectItem value="interview_preparation">Technical Interviews</SelectItem>
+                              <SelectItem value="work_life_balance">Work-Life Balance</SelectItem>
+                              <SelectItem value="imposter_syndrome">Imposter Syndrome</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            The biggest challenge you're currently facing
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="education"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Educational Background</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select your educational background" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="self_taught">Self-Taught</SelectItem>
+                              <SelectItem value="bootcamp">Coding Bootcamp</SelectItem>
+                              <SelectItem value="cs_degree">Computer Science Degree</SelectItem>
+                              <SelectItem value="engineering_degree">Engineering Degree</SelectItem>
+                              <SelectItem value="other_degree">Non-Tech Degree</SelectItem>
+                              <SelectItem value="online_courses">Online Courses</SelectItem>
+                              <SelectItem value="tech_job">Learning on the Job</SelectItem>
+                              <SelectItem value="high_school">High School</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Your educational background or learning path
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
             
             {/* Social Links Tab */}
             <TabsContent value="social">

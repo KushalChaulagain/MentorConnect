@@ -38,29 +38,32 @@ model Session {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  name             String?
-  email            String?   @unique
-  emailVerified    DateTime?
-  image            String?
-  hashedPassword   String?
-  role             Role      @default(MENTEE)
-  onboardingCompleted Boolean @default(false)
-  accounts         Account[]
-  sessions         Session[]
-  passwordResets   PasswordReset[]
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
+  hashedPassword        String?
+  role                  Role      @default(MENTEE)
+  onboardingCompleted   Boolean   @default(false)
+  accounts              Account[]
+  sessions              Session[]
+  passwordResets        PasswordReset[]
+  mentorProfile         MentorProfile?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  profile               Profile?
 
   // Mentor specific fields
-  mentorProfile    MentorProfile?
-  mentorConnections Connection[] @relation("MentorConnections")
+  mentorConnections     Connection[] @relation("MentorConnections")
 
   // Mentee specific fields
-  menteeConnections Connection[] @relation("MenteeConnections")
-  mentorReviews     MentorReview[] @relation("ReviewAuthor")
-  bookings          Booking[]
-  messages          Message[]
-  notifications     Notification[] @relation("UserNotifications")
-  sentNotifications Notification[] @relation("SentNotifications")
+  menteeConnections     Connection[] @relation("MenteeConnections")
+  mentorReviews         MentorReview[] @relation("ReviewAuthor")
+  bookings              Booking[]
+  messages              Message[]
+  notifications         Notification[] @relation("UserNotifications")
+  sentNotifications     Notification[] @relation("SentNotifications")
 }
 
 model MentorProfile {
@@ -177,6 +180,30 @@ model Notification {
 
   @@index([userId])
   @@index([senderId])
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  bio       String?
+  location  String?
+  company   String?
+  website   String?
+  githubUrl String?
+  linkedinUrl String?
+  timezone  String?
+  // Mentee specific fields
+  learningGoals      String?
+  skillLevel         String?
+  areasOfInterest    String?
+  learningStyle      String?
+  careerGoals        String?
+  currentChallenges  String?
+  education          String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {
