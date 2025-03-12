@@ -66,6 +66,14 @@ const formSchema = z.object({
   timezone: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0).optional(),
   skills: z.array(z.string()).optional(),
+  // Added for mentees
+  learningGoals: z.string().optional(),
+  skillLevel: z.string().optional(),
+  areasOfInterest: z.string().optional(),
+  learningStyle: z.string().optional(),
+  careerGoals: z.string().optional(),
+  currentChallenges: z.string().optional(),
+  education: z.string().optional(),
 });
 
 // Define interface for our form values
@@ -82,6 +90,7 @@ export default function EditProfilePage() {
   const [newSkill, setNewSkill] = useState("");
   const [formData, setFormData] = useState<Partial<FormValues>>({});
   const [profileFetched, setProfileFetched] = useState(false);
+  const [userRole, setUserRole] = useState<"mentor" | "mentee" | null>(null);
   
   // Create form
   const form = useForm<FormValues>({
@@ -98,6 +107,14 @@ export default function EditProfilePage() {
       timezone: "",
       yearsOfExperience: 0,
       skills: [],
+      // Added for mentees
+      learningGoals: "",
+      skillLevel: "",
+      areasOfInterest: "",
+      learningStyle: "",
+      careerGoals: "",
+      currentChallenges: "",
+      education: "",
     },
     // Important: This prevents form reset when tab changes
     mode: "onChange"
@@ -191,7 +208,103 @@ export default function EditProfilePage() {
     }
   }, [form, profileFetched, loading]);
   
-  // Modify the page effect to manage window focus events
+  // Add after fetchProfile function
+  const fetchUserRole = async () => {
+    try {
+      const response = await fetch('/api/user-role');
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role);
+      } else {
+        // Default to mentee if role can't be determined
+        setUserRole("mentee");
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      // Default to mentee if there's an error
+      setUserRole("mentee");
+    }
+  };
+  
+  // Add this after the fetchUserRole() function
+  const fetchProfileWithMenteeFields = useCallback(async () => {
+    // Skip fetching if we've already loaded the profile
+    if (profileFetched && !loading) {
+      console.log("Profile already fetched, skipping refetch");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log("Fetching profile data with mentee fields...");
+      
+      // Get saved values from localStorage if they exist
+      const savedTimezone = localStorage.getItem('profileTimezone') || '';
+      const savedLocation = localStorage.getItem('profileLocation') || '';
+      console.log("Using saved timezone from localStorage:", savedTimezone);
+      console.log("Using saved location from localStorage:", savedLocation);
+      
+      // Include saved values as query parameters
+      const queryParams = new URLSearchParams();
+      if (savedTimezone) queryParams.append('savedTimezone', savedTimezone);
+      if (savedLocation) queryParams.append('savedLocation', savedLocation);
+      
+      // Make API request with query parameters
+      const url = `/api/profile${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      console.log("Fetching from URL:", url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch profile data");
+      }
+      
+      const profileData = await response.json();
+      console.log("Fetched profile data:", profileData);
+      
+      // Store the full profile data for reference
+      setFormData(profileData);
+      
+      // Set avatar preview
+      setAvatarPreview(profileData.image || null);
+      
+      // Set skills
+      setSkills(profileData.skills || []);
+      
+      // Set form values, using fetched data, with preference to localStorage values
+      form.reset({
+        name: profileData.name || "",
+        title: profileData.title || "",
+        bio: profileData.bio || "",
+        location: savedLocation || profileData.location || "",
+        company: profileData.company || "",
+        website: profileData.website || "",
+        githubUrl: profileData.githubUrl || "",
+        linkedinUrl: profileData.linkedinUrl || "",
+        timezone: savedTimezone || profileData.timezone || "",
+        yearsOfExperience: profileData.yearsOfExperience || 0,
+        skills: profileData.skills || [],
+        // Add mentee fields
+        learningGoals: profileData.learningGoals || "",
+        skillLevel: profileData.skillLevel || "",
+        areasOfInterest: profileData.areasOfInterest || "",
+        learningStyle: profileData.learningStyle || "",
+        careerGoals: profileData.careerGoals || "",
+        currentChallenges: profileData.currentChallenges || "",
+        education: profileData.education || "",
+      });
+      
+      // Mark as fetched to prevent unnecessary refreshes
+      setProfileFetched(true);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      toast.error("Failed to load profile data");
+    } finally {
+      setLoading(false);
+    }
+  }, [form, profileFetched, loading]);
+  
+  // Replace the useEffect that fetches profile data
   useEffect(() => {
     if (status === "loading") return;
     
@@ -200,8 +313,11 @@ export default function EditProfilePage() {
       return;
     }
     
-    // Fetch profile initially
-    fetchProfile();
+    // Fetch user role first
+    fetchUserRole().then(() => {
+      // After getting the user role, fetch profile with appropriate fields
+      fetchProfileWithMenteeFields();
+    });
     
     // Disable auto-refresh on focus
     const disableAutoRefresh = () => {
@@ -215,7 +331,7 @@ export default function EditProfilePage() {
       // Clean up by removing event listener
       window.removeEventListener('focus', (e) => e.stopPropagation(), true);
     };
-  }, [session, status, router, fetchProfile]);
+  }, [session, status, router, fetchProfileWithMenteeFields]);
   
   // Handle avatar upload
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,9 +375,9 @@ export default function EditProfilePage() {
   
   // Handle form submission
   const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      
       // Log all state for debugging
       console.log("--- FORM SUBMISSION ---");
       console.log("Form values:", values);
@@ -323,6 +439,16 @@ export default function EditProfilePage() {
         yearsOfExperience: values.yearsOfExperience || formData.yearsOfExperience || 0,
         skills: skills.length > 0 ? skills : (formData.skills || []),
         ...(imageUrl && { image: imageUrl }),
+        // Add mentee fields if the user is a mentee
+        ...(userRole === "mentee" && {
+          learningGoals: values.learningGoals || formData.learningGoals || "",
+          skillLevel: values.skillLevel || formData.skillLevel || "",
+          areasOfInterest: values.areasOfInterest || formData.areasOfInterest || "",
+          learningStyle: values.learningStyle || formData.learningStyle || "",
+          careerGoals: values.careerGoals || formData.careerGoals || "",
+          currentChallenges: values.currentChallenges || formData.currentChallenges || "",
+          education: values.education || formData.education || "",
+        }),
       };
       
       console.log("Complete form data being sent:", completeFormData);
@@ -415,7 +541,11 @@ export default function EditProfilePage() {
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
             <TabsList className="grid grid-cols-3 w-full max-w-md">
               <TabsTrigger value="general" type="button" onClick={(e) => e.preventDefault()}>General</TabsTrigger>
-              <TabsTrigger value="professional" type="button" onClick={(e) => e.preventDefault()}>Professional</TabsTrigger>
+              {userRole === "mentor" ? (
+                <TabsTrigger value="professional" type="button" onClick={(e) => e.preventDefault()}>Professional</TabsTrigger>
+              ) : (
+                <TabsTrigger value="learning" type="button" onClick={(e) => e.preventDefault()}>Learning</TabsTrigger>
+              )}
               <TabsTrigger value="social" type="button" onClick={(e) => e.preventDefault()}>Social Links</TabsTrigger>
             </TabsList>
             
@@ -584,118 +714,369 @@ export default function EditProfilePage() {
             </TabsContent>
             
             {/* Professional Tab */}
-            <TabsContent value="professional">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Professional Details</CardTitle>
-                  <CardDescription>Update your professional information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company/Organization</FormLabel>
-                          <FormControl>
-                            <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
-                              <div className="px-3 text-muted-foreground">
-                                <Building size={16} />
+            {userRole === "mentor" && (
+              <TabsContent value="professional">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Professional Details</CardTitle>
+                    <CardDescription>Update your professional information</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="company"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company/Organization</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+                                <div className="px-3 text-muted-foreground">
+                                  <Building size={16} />
+                                </div>
+                                <Input 
+                                  placeholder="Your company or organization" 
+                                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                                  {...field} 
+                                />
                               </div>
-                              <Input 
-                                placeholder="Your company or organization" 
-                                className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
-                                {...field} 
-                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="yearsOfExperience"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Years of Experience</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+                                <div className="px-3 text-muted-foreground">
+                                  <Briefcase size={16} />
+                                </div>
+                                <Input 
+                                  type="number"
+                                  min={0}
+                                  placeholder="Years of experience" 
+                                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <FormItem>
+                        <FormLabel>Skills</FormLabel>
+                        <div className="flex flex-wrap gap-2 p-2 border rounded-md mb-2 min-h-[80px]">
+                          {skills.map((skill, index) => (
+                            <div 
+                              key={index}
+                              className="bg-muted px-3 py-1 rounded-full text-sm flex items-center"
+                            >
+                              {skill}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSkill(skill)}
+                                className="ml-2 text-muted-foreground hover:text-foreground"
+                              >
+                                ×
+                              </button>
                             </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                          ))}
+                          {skills.length === 0 && (
+                            <p className="text-sm text-muted-foreground p-2">
+                              No skills added yet
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Input
+                            value={newSkill}
+                            onChange={(e) => setNewSkill(e.target.value)}
+                            placeholder="Add a skill (e.g. React, Python)"
+                            className="flex-1"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddSkill();
+                              }
+                            }}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={handleAddSkill}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                        <FormDescription>
+                          Add skills that showcase your expertise
+                        </FormDescription>
+                      </FormItem>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+            
+            {/* Learning Tab */}
+            {userRole === "mentee" && (
+              <TabsContent value="learning">
+                <Card className="bg-gray-900 border-gray-800">
+                  <CardHeader>
+                    <CardTitle className="text-white">Learning Information</CardTitle>
+                    <CardDescription className="text-gray-400">Update your learning preferences and goals</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="skillLevel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-300">Current Skill Level</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                  <SelectValue placeholder="Select your skill level" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                <SelectItem value="beginner">Beginner</SelectItem>
+                                <SelectItem value="intermediate">Intermediate</SelectItem>
+                                <SelectItem value="advanced">Advanced</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription className="text-gray-500">
+                              Your current programming skill level
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="learningStyle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-gray-300">Learning Style</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                  <SelectValue placeholder="Select your learning style" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                                <SelectItem value="visual">Visual Learner</SelectItem>
+                                <SelectItem value="practical">Project-Based</SelectItem>
+                                <SelectItem value="theoretical">Theoretical</SelectItem>
+                                <SelectItem value="pair">Pair Programming</SelectItem>
+                                <SelectItem value="self-guided">Self-Guided</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription className="text-gray-500">
+                              How you prefer to learn new concepts
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
                     <FormField
                       control={form.control}
-                      name="yearsOfExperience"
+                      name="areasOfInterest"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Years of Experience</FormLabel>
-                          <FormControl>
-                            <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
-                              <div className="px-3 text-muted-foreground">
-                                <Briefcase size={16} />
-                              </div>
-                              <Input 
-                                type="number"
-                                min={0}
-                                placeholder="Years of experience" 
-                                className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
-                                {...field} 
-                              />
-                            </div>
-                          </FormControl>
+                          <FormLabel className="text-gray-300">Areas of Interest</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectValue placeholder="Select your main area of interest" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="frontend">Frontend Development</SelectItem>
+                              <SelectItem value="backend">Backend Development</SelectItem>
+                              <SelectItem value="fullstack">Full-Stack Development</SelectItem>
+                              <SelectItem value="mobile">Mobile Development</SelectItem>
+                              <SelectItem value="devops">DevOps & Cloud</SelectItem>
+                              <SelectItem value="data">Data Science & ML</SelectItem>
+                              <SelectItem value="gamedev">Game Development</SelectItem>
+                              <SelectItem value="blockchain">Blockchain & Web3</SelectItem>
+                              <SelectItem value="cybersecurity">Cybersecurity</SelectItem>
+                              <SelectItem value="ui_ux">UI/UX Design</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="text-gray-500">
+                            Your primary area of interest in tech
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <FormItem>
-                      <FormLabel>Skills</FormLabel>
-                      <div className="flex flex-wrap gap-2 p-2 border rounded-md mb-2 min-h-[80px]">
-                        {skills.map((skill, index) => (
-                          <div 
-                            key={index}
-                            className="bg-muted px-3 py-1 rounded-full text-sm flex items-center"
+
+                    <FormField
+                      control={form.control}
+                      name="learningGoals"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-300">Learning Goals</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
                           >
-                            {skill}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSkill(skill)}
-                              className="ml-2 text-muted-foreground hover:text-foreground"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        {skills.length === 0 && (
-                          <p className="text-sm text-muted-foreground p-2">
-                            No skills added yet
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Input
-                          value={newSkill}
-                          onChange={(e) => setNewSkill(e.target.value)}
-                          placeholder="Add a skill (e.g. React, Python)"
-                          className="flex-1"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddSkill();
-                            }
-                          }}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="outline"
-                          onClick={handleAddSkill}
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      <FormDescription>
-                        Add skills that showcase your expertise
-                      </FormDescription>
-                    </FormItem>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectValue placeholder="Select your primary learning goal" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="career_change">Career Change into Tech</SelectItem>
+                              <SelectItem value="skill_improvement">Improve Current Skills</SelectItem>
+                              <SelectItem value="new_tech">Learn New Technologies</SelectItem>
+                              <SelectItem value="project_help">Complete Specific Project</SelectItem>
+                              <SelectItem value="interview_prep">Interview Preparation</SelectItem>
+                              <SelectItem value="entrepreneurship">Launch Tech Business</SelectItem>
+                              <SelectItem value="certification">Prepare for Certification</SelectItem>
+                              <SelectItem value="promotion">Prepare for Promotion</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="text-gray-500">
+                            Your primary goal for seeking mentorship
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="careerGoals"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-300">Career Goals</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectValue placeholder="Select your career goal" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="junior_developer">Become Junior Developer</SelectItem>
+                              <SelectItem value="mid_level">Reach Mid-Level Developer</SelectItem>
+                              <SelectItem value="senior_developer">Become Senior Developer</SelectItem>
+                              <SelectItem value="tech_lead">Become Tech Lead</SelectItem>
+                              <SelectItem value="engineering_manager">Engineering Management</SelectItem>
+                              <SelectItem value="startup_founder">Start My Own Company</SelectItem>
+                              <SelectItem value="freelancer">Become Freelancer</SelectItem>
+                              <SelectItem value="specialized_role">Specialize in Niche Area</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="text-gray-500">
+                            Where you want your career to go in the future
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="currentChallenges"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-300">Current Challenges</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectValue placeholder="Select your biggest challenge" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="technical_skills">Technical Skills Gap</SelectItem>
+                              <SelectItem value="project_structure">Project Organization</SelectItem>
+                              <SelectItem value="code_quality">Improving Code Quality</SelectItem>
+                              <SelectItem value="debugging">Debugging Complex Issues</SelectItem>
+                              <SelectItem value="career_advancement">Career Advancement</SelectItem>
+                              <SelectItem value="job_search">Finding a Job/Internship</SelectItem>
+                              <SelectItem value="interview_preparation">Technical Interviews</SelectItem>
+                              <SelectItem value="work_life_balance">Work-Life Balance</SelectItem>
+                              <SelectItem value="imposter_syndrome">Imposter Syndrome</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="text-gray-500">
+                            The biggest challenge you're currently facing
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="education"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-300">Educational Background</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectValue placeholder="Select your educational background" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="self_taught">Self-Taught</SelectItem>
+                              <SelectItem value="bootcamp">Coding Bootcamp</SelectItem>
+                              <SelectItem value="cs_degree">Computer Science Degree</SelectItem>
+                              <SelectItem value="engineering_degree">Engineering Degree</SelectItem>
+                              <SelectItem value="other_degree">Non-Tech Degree</SelectItem>
+                              <SelectItem value="online_courses">Online Courses</SelectItem>
+                              <SelectItem value="tech_job">Learning on the Job</SelectItem>
+                              <SelectItem value="high_school">High School</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription className="text-gray-500">
+                            Your educational background or learning path
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
             
             {/* Social Links Tab */}
             <TabsContent value="social">
