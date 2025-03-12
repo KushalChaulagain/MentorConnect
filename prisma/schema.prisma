@@ -49,8 +49,6 @@ model User {
   accounts              Account[]
   sessions              Session[]
   passwordResets        PasswordReset[]
-  sentMessages          Message[] @relation("SentMessages")
-  receivedMessages      Message[] @relation("ReceivedMessages")
   mentorProfile         MentorProfile?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -193,6 +191,8 @@ model Profile {
   location  String?
   company   String?
   website   String?
+  githubUrl String?
+  linkedinUrl String?
   timezone  String?
   // Mentee specific fields
   learningGoals      String?

@@ -89,9 +89,17 @@ export async function GET(request: Request) {
       );
     }
     
-    // Fetch user from database
+    // Fetch user from database with specific fields only to avoid missing column errors
     const user = await prisma.user.findUnique({
       where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        onboardingCompleted: true
+      }
     });
     
     if (!user) {
@@ -116,8 +124,8 @@ export async function GET(request: Request) {
     // Check for regular profile using raw Prisma query to avoid TS errors
     let userProfile = null;
     try {
-      // Use a type assertion to work around TypeScript errors
-      userProfile = await (prisma as any).profile.findUnique({
+      // Use the proper Prisma API instead of type assertion
+      userProfile = await prisma.profile.findUnique({
         where: { userId: userId },
       });
       console.log("User profile found:", userProfile ? "Yes" : "No");
@@ -152,10 +160,11 @@ export async function GET(request: Request) {
       bio: userProfile?.bio || "",
       company: userProfile?.company || "",
       website: userProfile?.website || "",
-      githubUrl: "",
-      linkedinUrl: "",
+      // Get githubUrl and linkedinUrl from regular profile if available
+      githubUrl: userProfile?.githubUrl || "",
+      linkedinUrl: userProfile?.linkedinUrl || "",
       yearsOfExperience: 0,
-      // Mentee fields
+      // Mentee fields with better logging
       learningGoals: userProfile?.learningGoals || "",
       skillLevel: userProfile?.skillLevel || "",
       areasOfInterest: userProfile?.areasOfInterest || "",
@@ -165,8 +174,25 @@ export async function GET(request: Request) {
       education: userProfile?.education || "",
     };
     
+    console.log("User profile data being used:", {
+      githubUrl: userProfile?.githubUrl,
+      linkedinUrl: userProfile?.linkedinUrl,
+      learningGoals: userProfile?.learningGoals,
+      skillLevel: userProfile?.skillLevel,
+      areasOfInterest: userProfile?.areasOfInterest,
+      learningStyle: userProfile?.learningStyle,
+      careerGoals: userProfile?.careerGoals,
+      currentChallenges: userProfile?.currentChallenges,
+      education: userProfile?.education
+    });
+    
     // Add mentor-specific data if this user is a mentor
     if (mentorProfile) {
+      console.log("Adding mentor profile data to response:", {
+        github: mentorProfile.github,
+        linkedin: mentorProfile.linkedin
+      });
+      
       Object.assign(profileResponse, {
         // Fix naming mismatch between database and form
         githubUrl: mentorProfile.github || "", // database stores as 'github', form uses 'githubUrl'
@@ -287,15 +313,25 @@ export async function PUT(request: Request) {
     const body = await request.json();
     console.log("Received profile update body:", JSON.stringify(body, null, 2));
     
+    // Log mentee-specific fields for debugging
+    console.log("Mentee fields received:", {
+      learningGoals: body.learningGoals,
+      skillLevel: body.skillLevel,
+      areasOfInterest: body.areasOfInterest,
+      learningStyle: body.learningStyle,
+      careerGoals: body.careerGoals,
+      currentChallenges: body.currentChallenges,
+      education: body.education,
+    });
+    
     // 1. Update user basic info
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         name: body.name,
         ...(body.image && { image: body.image }),
-        ...(body.onboardingCompleted !== undefined && { 
-          onboardingCompleted: body.onboardingCompleted 
-        }),
+        // When a profile is successfully updated, mark onboarding as completed
+        onboardingCompleted: true
       },
     });
     
@@ -308,43 +344,45 @@ export async function PUT(request: Request) {
       company: body.company || "",
       website: body.website || "",
       timezone: body.timezone || "",
+      // Store social links in the regular profile for all users
+      githubUrl: body.githubUrl || "",
+      linkedinUrl: body.linkedinUrl || "",
     };
     
-    // Add mentee fields if the user is a mentee
-    if (user.role === "MENTEE") {
-      Object.assign(profileData, {
-        learningGoals: body.learningGoals || "",
-        skillLevel: body.skillLevel || "",
-        areasOfInterest: body.areasOfInterest || "",
-        learningStyle: body.learningStyle || "",
-        careerGoals: body.careerGoals || "",
-        currentChallenges: body.currentChallenges || "",
-        education: body.education || "",
-      });
-    }
+    // Always add mentee fields regardless of user role
+    // This ensures the fields are saved and available if user switches roles
+    Object.assign(profileData, {
+      learningGoals: body.learningGoals || "",
+      skillLevel: body.skillLevel || "",
+      areasOfInterest: body.areasOfInterest || "",
+      learningStyle: body.learningStyle || "",
+      careerGoals: body.careerGoals || "",
+      currentChallenges: body.currentChallenges || "",
+      education: body.education || "",
+    });
     
     console.log("Profile data to save:", JSON.stringify(profileData, null, 2));
     
-    // 3. Update or create the regular profile - use type assertion for TypeScript
+    // 3. Update or create the regular profile
     let profile;
     try {
-      // First check if profile exists using type assertion
-      const existingProfile = await (prisma as any).profile.findUnique({
+      // First check if profile exists - without type assertion since Profile is in our schema
+      const existingProfile = await prisma.profile.findUnique({
         where: { userId: userId },
       });
       
       console.log("Existing profile found?", existingProfile ? "Yes" : "No");
       
       if (existingProfile) {
-        // Update existing profile
-        profile = await (prisma as any).profile.update({
+        // Update existing profile - without type assertion
+        profile = await prisma.profile.update({
           where: { userId: userId },
           data: profileData,
         });
         console.log("Profile updated successfully");
       } else {
-        // Create new profile
-        profile = await (prisma as any).profile.create({
+        // Create new profile - without type assertion
+        profile = await prisma.profile.create({
           data: {
             userId: userId,
             ...profileData,
@@ -357,15 +395,10 @@ export async function PUT(request: Request) {
       console.log("Saved profile data:", JSON.stringify(profile, null, 2));
     } catch (profileError) {
       console.error("Error updating profile:", profileError);
-      // Even if profile update fails, try to continue with mentor profile
-      profile = {
-        ...profileData,
-        userId: userId,
-        id: "error",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      console.error("Using temporary profile object:", profile);
+      return NextResponse.json(
+        { error: "Failed to update profile", details: (profileError as Error).message },
+        { status: 500 }
+      );
     }
     
     // 4. If user is a mentor, handle mentor profile separately
@@ -432,7 +465,8 @@ export async function PUT(request: Request) {
       }
     }
     
-    // Return success response
+    // Return success response with the updated profile data
+    // Include all mentee fields in the response so the client has them
     return NextResponse.json({
       message: "Profile updated successfully",
       user: {
@@ -442,10 +476,18 @@ export async function PUT(request: Request) {
         image: updatedUser.image,
         role: updatedUser.role,
         onboardingCompleted: updatedUser.onboardingCompleted,
-        timezone: profile.timezone, 
-        location: profile.location,
       },
-      profile,
+      profile: {
+        ...profile,
+        // Ensure these fields are always included in the response
+        learningGoals: profile.learningGoals,
+        skillLevel: profile.skillLevel,
+        areasOfInterest: profile.areasOfInterest,
+        learningStyle: profile.learningStyle,
+        careerGoals: profile.careerGoals,
+        currentChallenges: profile.currentChallenges,
+        education: profile.education,
+      },
       ...(mentorProfile && { mentorProfile }),
     });
   } catch (error) {

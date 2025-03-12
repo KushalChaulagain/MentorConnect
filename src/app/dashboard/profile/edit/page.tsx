@@ -138,7 +138,7 @@ export default function EditProfilePage() {
     return () => clearTimeout(timeoutId);
   }, [form]);
   
-  // Memoize fetchProfile to prevent unnecessary refetches
+  // Replace the fetchProfile function with the updated version
   const fetchProfile = useCallback(async () => {
     // Skip fetching if we've already loaded the profile
     if (profileFetched && !loading) {
@@ -196,7 +196,18 @@ export default function EditProfilePage() {
         timezone: savedTimezone || profileData.timezone || "",
         yearsOfExperience: profileData.yearsOfExperience || 0,
         skills: profileData.skills || [],
+        // Include mentee-specific fields
+        learningGoals: profileData.learningGoals || "",
+        skillLevel: profileData.skillLevel || "",
+        areasOfInterest: profileData.areasOfInterest || "",
+        learningStyle: profileData.learningStyle || "",
+        careerGoals: profileData.careerGoals || "",
+        currentChallenges: profileData.currentChallenges || "",
+        education: profileData.education || "",
       });
+      
+      // Log form values after reset for debugging
+      console.log("Form values after reset:", form.getValues());
       
       // Mark as fetched to prevent unnecessary refreshes
       setProfileFetched(true);
@@ -226,84 +237,6 @@ export default function EditProfilePage() {
     }
   };
   
-  // Add this after the fetchUserRole() function
-  const fetchProfileWithMenteeFields = useCallback(async () => {
-    // Skip fetching if we've already loaded the profile
-    if (profileFetched && !loading) {
-      console.log("Profile already fetched, skipping refetch");
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      console.log("Fetching profile data with mentee fields...");
-      
-      // Get saved values from localStorage if they exist
-      const savedTimezone = localStorage.getItem('profileTimezone') || '';
-      const savedLocation = localStorage.getItem('profileLocation') || '';
-      console.log("Using saved timezone from localStorage:", savedTimezone);
-      console.log("Using saved location from localStorage:", savedLocation);
-      
-      // Include saved values as query parameters
-      const queryParams = new URLSearchParams();
-      if (savedTimezone) queryParams.append('savedTimezone', savedTimezone);
-      if (savedLocation) queryParams.append('savedLocation', savedLocation);
-      
-      // Make API request with query parameters
-      const url = `/api/profile${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      console.log("Fetching from URL:", url);
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch profile data");
-      }
-      
-      const profileData = await response.json();
-      console.log("Fetched profile data:", profileData);
-      
-      // Store the full profile data for reference
-      setFormData(profileData);
-      
-      // Set avatar preview
-      setAvatarPreview(profileData.image || null);
-      
-      // Set skills
-      setSkills(profileData.skills || []);
-      
-      // Set form values, using fetched data, with preference to localStorage values
-      form.reset({
-        name: profileData.name || "",
-        title: profileData.title || "",
-        bio: profileData.bio || "",
-        location: savedLocation || profileData.location || "",
-        company: profileData.company || "",
-        website: profileData.website || "",
-        githubUrl: profileData.githubUrl || "",
-        linkedinUrl: profileData.linkedinUrl || "",
-        timezone: savedTimezone || profileData.timezone || "",
-        yearsOfExperience: profileData.yearsOfExperience || 0,
-        skills: profileData.skills || [],
-        // Add mentee fields
-        learningGoals: profileData.learningGoals || "",
-        skillLevel: profileData.skillLevel || "",
-        areasOfInterest: profileData.areasOfInterest || "",
-        learningStyle: profileData.learningStyle || "",
-        careerGoals: profileData.careerGoals || "",
-        currentChallenges: profileData.currentChallenges || "",
-        education: profileData.education || "",
-      });
-      
-      // Mark as fetched to prevent unnecessary refreshes
-      setProfileFetched(true);
-    } catch (error) {
-      console.error("Error fetching profile:", error);
-      toast.error("Failed to load profile data");
-    } finally {
-      setLoading(false);
-    }
-  }, [form, profileFetched, loading]);
-  
   // Replace the useEffect that fetches profile data
   useEffect(() => {
     if (status === "loading") return;
@@ -313,11 +246,13 @@ export default function EditProfilePage() {
       return;
     }
     
-    // Fetch user role first
-    fetchUserRole().then(() => {
-      // After getting the user role, fetch profile with appropriate fields
-      fetchProfileWithMenteeFields();
-    });
+    // First fetch the user role
+    const fetchAndSetup = async () => {
+      await fetchUserRole();
+      await fetchProfile();
+    };
+    
+    fetchAndSetup();
     
     // Disable auto-refresh on focus
     const disableAutoRefresh = () => {
@@ -331,7 +266,7 @@ export default function EditProfilePage() {
       // Clean up by removing event listener
       window.removeEventListener('focus', (e) => e.stopPropagation(), true);
     };
-  }, [session, status, router, fetchProfileWithMenteeFields]);
+  }, [session, status, router, fetchProfile]);
   
   // Handle avatar upload
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -373,7 +308,7 @@ export default function EditProfilePage() {
     form.setValue('skills', updatedSkills);
   };
   
-  // Handle form submission
+  // Update onSubmit to add logging for every field and fix saving logic
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
     
@@ -384,6 +319,17 @@ export default function EditProfilePage() {
       console.log("Saved form data:", formData);
       console.log("Skills:", skills);
       console.log("Timezone:", values.timezone);
+      
+      // Debug logging for mentee fields
+      console.log("Mentee Fields:", {
+        learningGoals: values.learningGoals,
+        skillLevel: values.skillLevel,
+        areasOfInterest: values.areasOfInterest,
+        learningStyle: values.learningStyle,
+        careerGoals: values.careerGoals,
+        currentChallenges: values.currentChallenges,
+        education: values.education,
+      });
       
       // Get current values from all tabs
       const currentValues = form.getValues();
@@ -427,28 +373,26 @@ export default function EditProfilePage() {
       
       // Create a complete profile update object with all fields
       const completeFormData = {
-        name: values.name || formData.name || "",
-        title: values.title || formData.title || "",
-        bio: values.bio || formData.bio || "",
-        location: values.location || formData.location || "",
-        company: values.company || formData.company || "",
-        website: values.website || formData.website || "",
-        githubUrl: values.githubUrl || formData.githubUrl || "",
-        linkedinUrl: values.linkedinUrl || formData.linkedinUrl || "",
-        timezone: values.timezone || formData.timezone || "",
-        yearsOfExperience: values.yearsOfExperience || formData.yearsOfExperience || 0,
-        skills: skills.length > 0 ? skills : (formData.skills || []),
+        name: values.name,
+        title: values.title || "",
+        bio: values.bio || "",
+        location: values.location || "",
+        company: values.company || "",
+        website: values.website || "",
+        githubUrl: values.githubUrl || "",
+        linkedinUrl: values.linkedinUrl || "",
+        timezone: values.timezone || "",
+        yearsOfExperience: values.yearsOfExperience || 0,
+        skills: skills.length > 0 ? skills : [],
         ...(imageUrl && { image: imageUrl }),
-        // Add mentee fields if the user is a mentee
-        ...(userRole === "mentee" && {
-          learningGoals: values.learningGoals || formData.learningGoals || "",
-          skillLevel: values.skillLevel || formData.skillLevel || "",
-          areasOfInterest: values.areasOfInterest || formData.areasOfInterest || "",
-          learningStyle: values.learningStyle || formData.learningStyle || "",
-          careerGoals: values.careerGoals || formData.careerGoals || "",
-          currentChallenges: values.currentChallenges || formData.currentChallenges || "",
-          education: values.education || formData.education || "",
-        }),
+        // Always include mentee fields regardless of role
+        learningGoals: values.learningGoals || "",
+        skillLevel: values.skillLevel || "",
+        areasOfInterest: values.areasOfInterest || "",
+        learningStyle: values.learningStyle || "",
+        careerGoals: values.careerGoals || "",
+        currentChallenges: values.currentChallenges || "",
+        education: values.education || "",
       };
       
       console.log("Complete form data being sent:", completeFormData);
@@ -475,8 +419,10 @@ export default function EditProfilePage() {
       // Refresh the profile data
       fetchProfile();
       
-      // Redirect to profile page
-      router.push("/dashboard/profile");
+      // Redirect to profile page after a small delay to ensure data is refreshed
+      setTimeout(() => {
+        router.push("/dashboard/profile");
+      }, 500);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update profile");
@@ -832,10 +778,10 @@ export default function EditProfilePage() {
             {/* Learning Tab */}
             {userRole === "mentee" && (
               <TabsContent value="learning">
-                <Card className="bg-gray-900 border-gray-800">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="text-white">Learning Information</CardTitle>
-                    <CardDescription className="text-gray-400">Update your learning preferences and goals</CardDescription>
+                    <CardTitle>Learning Information</CardTitle>
+                    <CardDescription>Update your learning preferences and goals</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2">
@@ -844,23 +790,23 @@ export default function EditProfilePage() {
                         name="skillLevel"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-300">Current Skill Level</FormLabel>
+                            <FormLabel>Current Skill Level</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectTrigger>
                                   <SelectValue placeholder="Select your skill level" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectContent>
                                 <SelectItem value="beginner">Beginner</SelectItem>
                                 <SelectItem value="intermediate">Intermediate</SelectItem>
                                 <SelectItem value="advanced">Advanced</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormDescription className="text-gray-500">
+                            <FormDescription>
                               Your current programming skill level
                             </FormDescription>
                             <FormMessage />
@@ -873,17 +819,17 @@ export default function EditProfilePage() {
                         name="learningStyle"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-gray-300">Learning Style</FormLabel>
+                            <FormLabel>Learning Style</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                                <SelectTrigger>
                                   <SelectValue placeholder="Select your learning style" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                              <SelectContent>
                                 <SelectItem value="visual">Visual Learner</SelectItem>
                                 <SelectItem value="practical">Project-Based</SelectItem>
                                 <SelectItem value="theoretical">Theoretical</SelectItem>
@@ -891,7 +837,7 @@ export default function EditProfilePage() {
                                 <SelectItem value="self-guided">Self-Guided</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormDescription className="text-gray-500">
+                            <FormDescription>
                               How you prefer to learn new concepts
                             </FormDescription>
                             <FormMessage />
@@ -905,17 +851,17 @@ export default function EditProfilePage() {
                       name="areasOfInterest"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-300">Areas of Interest</FormLabel>
+                          <FormLabel>Areas of Interest</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select your main area of interest" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                            <SelectContent>
                               <SelectItem value="frontend">Frontend Development</SelectItem>
                               <SelectItem value="backend">Backend Development</SelectItem>
                               <SelectItem value="fullstack">Full-Stack Development</SelectItem>
@@ -928,7 +874,7 @@ export default function EditProfilePage() {
                               <SelectItem value="ui_ux">UI/UX Design</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription className="text-gray-500">
+                          <FormDescription>
                             Your primary area of interest in tech
                           </FormDescription>
                           <FormMessage />
@@ -941,17 +887,17 @@ export default function EditProfilePage() {
                       name="learningGoals"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-300">Learning Goals</FormLabel>
+                          <FormLabel>Learning Goals</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select your primary learning goal" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                            <SelectContent>
                               <SelectItem value="career_change">Career Change into Tech</SelectItem>
                               <SelectItem value="skill_improvement">Improve Current Skills</SelectItem>
                               <SelectItem value="new_tech">Learn New Technologies</SelectItem>
@@ -962,7 +908,7 @@ export default function EditProfilePage() {
                               <SelectItem value="promotion">Prepare for Promotion</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription className="text-gray-500">
+                          <FormDescription>
                             Your primary goal for seeking mentorship
                           </FormDescription>
                           <FormMessage />
@@ -975,17 +921,17 @@ export default function EditProfilePage() {
                       name="careerGoals"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-300">Career Goals</FormLabel>
+                          <FormLabel>Career Goals</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select your career goal" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                            <SelectContent>
                               <SelectItem value="junior_developer">Become Junior Developer</SelectItem>
                               <SelectItem value="mid_level">Reach Mid-Level Developer</SelectItem>
                               <SelectItem value="senior_developer">Become Senior Developer</SelectItem>
@@ -996,7 +942,7 @@ export default function EditProfilePage() {
                               <SelectItem value="specialized_role">Specialize in Niche Area</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription className="text-gray-500">
+                          <FormDescription>
                             Where you want your career to go in the future
                           </FormDescription>
                           <FormMessage />
@@ -1009,17 +955,17 @@ export default function EditProfilePage() {
                       name="currentChallenges"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-300">Current Challenges</FormLabel>
+                          <FormLabel>Current Challenges</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select your biggest challenge" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                            <SelectContent>
                               <SelectItem value="technical_skills">Technical Skills Gap</SelectItem>
                               <SelectItem value="project_structure">Project Organization</SelectItem>
                               <SelectItem value="code_quality">Improving Code Quality</SelectItem>
@@ -1031,7 +977,7 @@ export default function EditProfilePage() {
                               <SelectItem value="imposter_syndrome">Imposter Syndrome</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription className="text-gray-500">
+                          <FormDescription>
                             The biggest challenge you're currently facing
                           </FormDescription>
                           <FormMessage />
@@ -1044,17 +990,17 @@ export default function EditProfilePage() {
                       name="education"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-gray-300">Educational Background</FormLabel>
+                          <FormLabel>Educational Background</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select your educational background" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                            <SelectContent>
                               <SelectItem value="self_taught">Self-Taught</SelectItem>
                               <SelectItem value="bootcamp">Coding Bootcamp</SelectItem>
                               <SelectItem value="cs_degree">Computer Science Degree</SelectItem>
@@ -1065,7 +1011,7 @@ export default function EditProfilePage() {
                               <SelectItem value="high_school">High School</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormDescription className="text-gray-500">
+                          <FormDescription>
                             Your educational background or learning path
                           </FormDescription>
                           <FormMessage />

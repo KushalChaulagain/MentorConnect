@@ -43,6 +43,13 @@ interface UserProfile {
   completionStatus?: number;
   timezone?: string;
   isMentor?: boolean;
+  skillLevel?: string;
+  areasOfInterest?: string;
+  learningGoals?: string;
+  learningStyle?: string;
+  careerGoals?: string;
+  currentChallenges?: string;
+  education?: string;
 }
 
 // Define the mentor profile type
@@ -361,6 +368,136 @@ export default function ProfilePage() {
                   </p>
                 </CardContent>
               </Card>
+              
+              {/* Mentee Learning Information (show only for mentees) */}
+              {!profile?.isMentor && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl">Learning Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Display mentee fields in a nice format */}
+                    {profile?.skillLevel && (
+                      <div>
+                        <h3 className="text-sm font-medium">Skill Level</h3>
+                        <p className="text-muted-foreground mt-1 capitalize">
+                          {profile.skillLevel}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile?.areasOfInterest && (
+                      <div>
+                        <h3 className="text-sm font-medium">Areas of Interest</h3>
+                        <p className="text-muted-foreground mt-1">
+                          {profile.areasOfInterest === 'frontend' ? 'Frontend Development' :
+                           profile.areasOfInterest === 'backend' ? 'Backend Development' :
+                           profile.areasOfInterest === 'fullstack' ? 'Full-Stack Development' :
+                           profile.areasOfInterest === 'mobile' ? 'Mobile Development' :
+                           profile.areasOfInterest === 'devops' ? 'DevOps & Cloud' :
+                           profile.areasOfInterest === 'data' ? 'Data Science & ML' :
+                           profile.areasOfInterest === 'gamedev' ? 'Game Development' :
+                           profile.areasOfInterest === 'blockchain' ? 'Blockchain & Web3' :
+                           profile.areasOfInterest === 'cybersecurity' ? 'Cybersecurity' :
+                           profile.areasOfInterest === 'ui_ux' ? 'UI/UX Design' :
+                           profile.areasOfInterest}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile?.learningGoals && (
+                      <div>
+                        <h3 className="text-sm font-medium">Learning Goals</h3>
+                        <p className="text-muted-foreground mt-1">
+                          {profile.learningGoals === 'career_change' ? 'Career Change into Tech' :
+                           profile.learningGoals === 'skill_improvement' ? 'Improve Current Skills' :
+                           profile.learningGoals === 'new_tech' ? 'Learn New Technologies' :
+                           profile.learningGoals === 'project_help' ? 'Complete Specific Project' :
+                           profile.learningGoals === 'interview_prep' ? 'Interview Preparation' :
+                           profile.learningGoals === 'entrepreneurship' ? 'Launch Tech Business' :
+                           profile.learningGoals === 'certification' ? 'Prepare for Certification' :
+                           profile.learningGoals === 'promotion' ? 'Prepare for Promotion' :
+                           profile.learningGoals}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile?.learningStyle && (
+                      <div>
+                        <h3 className="text-sm font-medium">Learning Style</h3>
+                        <p className="text-muted-foreground mt-1">
+                          {profile.learningStyle === 'visual' ? 'Visual Learner' :
+                           profile.learningStyle === 'practical' ? 'Project-Based' :
+                           profile.learningStyle === 'theoretical' ? 'Theoretical' :
+                           profile.learningStyle === 'pair' ? 'Pair Programming' :
+                           profile.learningStyle === 'self-guided' ? 'Self-Guided' :
+                           profile.learningStyle}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile?.careerGoals && (
+                      <div>
+                        <h3 className="text-sm font-medium">Career Goals</h3>
+                        <p className="text-muted-foreground mt-1">
+                          {profile.careerGoals === 'junior_developer' ? 'Become Junior Developer' :
+                           profile.careerGoals === 'mid_level' ? 'Reach Mid-Level Developer' :
+                           profile.careerGoals === 'senior_developer' ? 'Become Senior Developer' :
+                           profile.careerGoals === 'tech_lead' ? 'Become Tech Lead' :
+                           profile.careerGoals === 'engineering_manager' ? 'Engineering Management' :
+                           profile.careerGoals === 'startup_founder' ? 'Start My Own Company' :
+                           profile.careerGoals === 'freelancer' ? 'Become Freelancer' :
+                           profile.careerGoals === 'specialized_role' ? 'Specialize in Niche Area' :
+                           profile.careerGoals}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile?.currentChallenges && (
+                      <div>
+                        <h3 className="text-sm font-medium">Current Challenges</h3>
+                        <p className="text-muted-foreground mt-1">
+                          {profile.currentChallenges === 'technical_skills' ? 'Technical Skills Gap' :
+                           profile.currentChallenges === 'project_structure' ? 'Project Organization' :
+                           profile.currentChallenges === 'code_quality' ? 'Improving Code Quality' :
+                           profile.currentChallenges === 'debugging' ? 'Debugging Complex Issues' :
+                           profile.currentChallenges === 'career_advancement' ? 'Career Advancement' :
+                           profile.currentChallenges === 'job_search' ? 'Finding a Job/Internship' :
+                           profile.currentChallenges === 'interview_preparation' ? 'Technical Interviews' :
+                           profile.currentChallenges === 'work_life_balance' ? 'Work-Life Balance' :
+                           profile.currentChallenges === 'imposter_syndrome' ? 'Imposter Syndrome' :
+                           profile.currentChallenges}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {profile?.education && (
+                      <div>
+                        <h3 className="text-sm font-medium">Educational Background</h3>
+                        <p className="text-muted-foreground mt-1">
+                          {profile.education === 'self_taught' ? 'Self-Taught' :
+                           profile.education === 'bootcamp' ? 'Coding Bootcamp' :
+                           profile.education === 'cs_degree' ? 'Computer Science Degree' :
+                           profile.education === 'engineering_degree' ? 'Engineering Degree' :
+                           profile.education === 'other_degree' ? 'Non-Tech Degree' :
+                           profile.education === 'online_courses' ? 'Online Courses' :
+                           profile.education === 'tech_job' ? 'Learning on the Job' :
+                           profile.education === 'high_school' ? 'High School' :
+                           profile.education}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {!profile?.skillLevel && !profile?.areasOfInterest && !profile?.learningGoals && 
+                     !profile?.learningStyle && !profile?.careerGoals && !profile?.currentChallenges && 
+                     !profile?.education && (
+                      <p className="text-center py-4 text-muted-foreground">
+                        No learning information added yet. Complete your profile to add learning details.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
               
               {/* Mentor Stats Section (if user is a mentor) */}
               {mentorProfile && (
