@@ -1,5 +1,6 @@
 "use client";
 
+import SkillBadge from "@/components/SkillBadge";
 import {
     Avatar,
     AvatarFallback,
@@ -65,6 +66,7 @@ const formSchema = z.object({
   linkedinUrl: z.string().url("Please enter a valid LinkedIn URL").optional().or(z.literal("")),
   timezone: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0).optional(),
+  hourlyRate: z.coerce.number().min(10, "Hourly rate must be at least Rs. 10").optional(),
   skills: z.array(z.string()).optional(),
   // Added for mentees
   learningGoals: z.string().optional(),
@@ -195,6 +197,7 @@ export default function EditProfilePage() {
         linkedinUrl: profileData.linkedinUrl || "",
         timezone: savedTimezone || profileData.timezone || "",
         yearsOfExperience: profileData.yearsOfExperience || 0,
+        hourlyRate: profileData.hourlyRate || 0,
         skills: profileData.skills || [],
         // Include mentee-specific fields
         learningGoals: profileData.learningGoals || "",
@@ -331,6 +334,13 @@ export default function EditProfilePage() {
         education: values.education,
       });
       
+      // Debug logging for mentor fields
+      console.log("Mentor Fields:", {
+        hourlyRate: values.hourlyRate,
+        yearsOfExperience: values.yearsOfExperience,
+        skills: skills,
+      });
+      
       // Get current values from all tabs
       const currentValues = form.getValues();
       console.log("Current form values:", currentValues);
@@ -371,9 +381,9 @@ export default function EditProfilePage() {
         }
       }
       
-      // Create a complete profile update object with all fields
+      // Create complete form data object
       const completeFormData = {
-        name: values.name,
+        name: values.name || "",
         title: values.title || "",
         bio: values.bio || "",
         location: values.location || "",
@@ -383,6 +393,7 @@ export default function EditProfilePage() {
         linkedinUrl: values.linkedinUrl || "",
         timezone: values.timezone || "",
         yearsOfExperience: values.yearsOfExperience || 0,
+        hourlyRate: values.hourlyRate || 0,
         skills: skills.length > 0 ? skills : [],
         ...(imageUrl && { image: imageUrl }),
         // Always include mentee fields regardless of role
@@ -716,6 +727,34 @@ export default function EditProfilePage() {
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={form.control}
+                        name="hourlyRate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hourly Rate (NPR)</FormLabel>
+                            <FormControl>
+                              <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+                                <div className="px-3 text-muted-foreground">
+                                  Rs.
+                                </div>
+                                <Input 
+                                  type="number"
+                                  min={10}
+                                  placeholder="Your hourly rate in NPR" 
+                                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0" 
+                                  {...field} 
+                                />
+                              </div>
+                            </FormControl>
+                            <FormDescription>
+                              Minimum hourly rate is Rs. 10 (required for verified mentor status)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                     
                     <div className="space-y-4">
@@ -723,19 +762,11 @@ export default function EditProfilePage() {
                         <FormLabel>Skills</FormLabel>
                         <div className="flex flex-wrap gap-2 p-2 border rounded-md mb-2 min-h-[80px]">
                           {skills.map((skill, index) => (
-                            <div 
+                            <SkillBadge
                               key={index}
-                              className="bg-muted px-3 py-1 rounded-full text-sm flex items-center"
-                            >
-                              {skill}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveSkill(skill)}
-                                className="ml-2 text-muted-foreground hover:text-foreground"
-                              >
-                                ×
-                              </button>
-                            </div>
+                              skill={skill}
+                              onRemove={() => handleRemoveSkill(skill)}
+                            />
                           ))}
                           {skills.length === 0 && (
                             <p className="text-sm text-muted-foreground p-2">
@@ -769,6 +800,17 @@ export default function EditProfilePage() {
                           Add skills that showcase your expertise
                         </FormDescription>
                       </FormItem>
+                    </div>
+                    
+                    {/* Add validation message for skills */}
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg flex items-start space-x-2">
+                      <div className="text-amber-500 dark:text-amber-400 mt-0.5">ℹ️</div>
+                      <div>
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300">At least 3 skills required</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Add a minimum of 3 skills to achieve verified mentor status. You currently have {skills.length} skill{skills.length !== 1 ? 's' : ''}.
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

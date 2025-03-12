@@ -1,5 +1,6 @@
 'use client';
 
+import SkillBadge from "@/components/SkillBadge";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -227,9 +228,11 @@ export default function MentorProfilePage() {
                   <h3 className="font-medium mb-2">Technical Skills</h3>
                   <div className="flex flex-wrap gap-2">
                     {mentor.skills.map((skill) => (
-                      <Badge key={skill} variant="secondary">
-                        {skill}
-                      </Badge>
+                      <SkillBadge 
+                        key={skill} 
+                        skill={skill}
+                        showRemoveButton={false}
+                      />
                     ))}
                   </div>
                 </div>

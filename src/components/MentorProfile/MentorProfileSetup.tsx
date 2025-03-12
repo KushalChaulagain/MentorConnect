@@ -163,7 +163,7 @@ export default function MentorProfileSetup() {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         console.log('12. Attempting redirection...');
-        window.location.href = '/dashboard/mentor';
+        window.location.href = '/dashboard/mentor?fromOnboarding=true';
       } catch (error) {
         console.error('Session update error:', error);
         toast({

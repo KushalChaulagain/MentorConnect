@@ -228,6 +228,11 @@ export async function GET(request: Request) {
       if (userProfile.timezone) completedFields++;
       if (userProfile.company) completedFields++;
       
+      // Social links count for all users
+      totalFields += 2;
+      if (userProfile.githubUrl) completedFields++;
+      if (userProfile.linkedinUrl) completedFields++;
+      
       // For mentees, check mentee-specific fields
       if (user.role === "MENTEE") {
         totalFields += 5; // Add mentee-specific fields
@@ -242,15 +247,66 @@ export async function GET(request: Request) {
     
     // Add mentor-specific fields to calculation
     if (mentorProfile) {
-      totalFields += 3; // Add mentor fields
-      completedFields += 3; // Assume mentor profile is complete for simplicity
+      // Add mentor fields - check each field individually instead of assuming all are complete
+      totalFields += 7; // Required mentor fields: expertise, skills, hourlyRate, experience, bio, github, linkedin
+      
+      // Check which mentor fields are filled
+      if (mentorProfile.expertise && mentorProfile.expertise.length > 0) completedFields++;
+      if (mentorProfile.skills && mentorProfile.skills.length > 0) completedFields++;
+      if (mentorProfile.hourlyRate && mentorProfile.hourlyRate > 0) completedFields++;
+      if (mentorProfile.experience) completedFields++;
+      // Bio is critically important for mentors, so we weight it more heavily
+      if (mentorProfile.bio && mentorProfile.bio.length > 30) {
+        completedFields += 2; // Give extra weight to a substantial bio
+      } else if (mentorProfile.bio) {
+        completedFields++; // Only one point for minimal bio
+      }
+      if (mentorProfile.github) completedFields++;
+      if (mentorProfile.linkedin) completedFields++;
     }
     
     // Calculate percentage
     const completionPercentage = Math.round((completedFields / totalFields) * 100);
-    profileResponse.completionStatus = completionPercentage >= 90 ? 100 : completionPercentage;
     
-    console.log("Returning profile response with completion:", profileResponse.completionStatus + "%");
+    // Check if profile is complete based on role-specific requirements
+    let isProfileComplete = false;
+    if (mentorProfile) {
+      // Mentors must have their critical mentor-specific fields filled out properly
+      const criticalFields = [
+        !!mentorProfile.bio && mentorProfile.bio.length >= 100, // Force longer bios
+        !!mentorProfile.expertise && mentorProfile.expertise.length >= 2,
+        !!mentorProfile.skills && mentorProfile.skills.length >= 3,
+        !!mentorProfile.hourlyRate && mentorProfile.hourlyRate >= 10,
+        !!mentorProfile.experience && parseInt(mentorProfile.experience as string) >= 1,
+        // We check for GitHub and LinkedIn here but use the values from the right property depending on where they're stored
+        !!(mentorProfile.github || userProfile?.githubUrl) && ((mentorProfile.github?.length ?? 0) > 5 || (userProfile?.githubUrl?.length ?? 0) > 5),
+        !!(mentorProfile.linkedin || userProfile?.linkedinUrl) && ((mentorProfile.linkedin?.length ?? 0) > 5 || (userProfile?.linkedinUrl?.length ?? 0) > 5),
+        !!userProfile?.website && userProfile.website.length > 5,
+        !!userProfile?.timezone,
+        !!userProfile?.location
+      ];
+      
+      // Check if ALL critical fields are true
+      const allFieldsComplete = criticalFields.every(field => field === true);
+      isProfileComplete = completionPercentage >= 90 && allFieldsComplete;
+      
+      // Override - If coming from onboarding, always show incomplete
+      if (request.url.includes('fromOnboarding=true')) {
+        isProfileComplete = false;
+      }
+      
+      console.log("Mentor critical fields:", criticalFields);
+    } else {
+      // Mentees just need 80% completion
+      isProfileComplete = completionPercentage >= 80;
+    }
+    
+    // Set final completion status - use actual percentage instead of capping at 75%
+    profileResponse.completionStatus = isProfileComplete ? 100 : completionPercentage;
+    
+    console.log(`Profile completion: ${completedFields}/${totalFields} = ${completionPercentage}%`);
+    console.log(`Final profile status: ${isProfileComplete ? 'COMPLETE' : 'INCOMPLETE'} (${profileResponse.completionStatus}%)`);
+    
     return NextResponse.json(profileResponse);
   } catch (error) {
     console.error("Detailed error in profile API:", error);
@@ -330,10 +386,17 @@ export async function PUT(request: Request) {
       data: {
         name: body.name,
         ...(body.image && { image: body.image }),
-        // When a profile is successfully updated, mark onboarding as completed
-        onboardingCompleted: true
+        // For mentors, require much more comprehensive profile data to mark onboarding as completed
+        onboardingCompleted: isUserMentor 
+          ? !!(body.bio && body.bio.length > 30 && body.title && body.company && 
+               body.skills && body.skills.length > 0 && 
+               body.githubUrl && body.linkedinUrl && 
+               body.hourlyRate && body.yearsOfExperience)
+          : true
       },
     });
+    
+    console.log("User updated, onboardingCompleted set to:", updatedUser.onboardingCompleted);
     
     // 2. Create profile data object - for BOTH mentors and mentees
     // IMPORTANT: Make sure all fields are included and correctly typed
@@ -421,10 +484,16 @@ export async function PUT(request: Request) {
           }
         }
         
+        // Check if bio is provided for mentor
+        if (!body.bio || body.bio.trim() === '') {
+          console.warn("Warning: Mentor profile update without bio - using temporary placeholder");
+          // Don't prevent the update but log a warning
+        }
+        
         // Mentor-specific fields only
         const mentorProfileData = {
           title: body.title || "Mentor",
-          bio: body.bio || "",
+          bio: body.bio || "Bio information pending...",
           company: body.company || "",
           // Map form field names to database field names
           github: body.githubUrl || "",
