@@ -1,6 +1,7 @@
 'use client';
 
 import BookingForm from '@/components/BookingForm';
+import SkillBadge from "@/components/SkillBadge";
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -119,15 +120,14 @@ export default function MentorProfilePage({
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Skills</h3>
+                <h3 className="font-semibold mb-2">Skills & Technologies</h3>
                 <div className="flex flex-wrap gap-2">
                   {mentorProfile.skills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm"
-                    >
-                      {skill}
-                    </span>
+                    <SkillBadge 
+                      key={skill} 
+                      skill={skill} 
+                      showRemoveButton={false}
+                    />
                   ))}
                 </div>
               </div>

@@ -1,15 +1,16 @@
 "use client"
 
 import { AddEventDialog } from "@/components/AddEventDialog"
+import MentorFeatureGuard from "@/components/MentorFeatureGuard"
 import Calendar from "@/components/NewCalendar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import type { BookingStatus } from "@prisma/client"
@@ -190,158 +191,160 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#0B0E14]">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[rgba(255,255,255,0.06)]">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="text-gray-400 h-5 w-5" />
-          <div>
-            <h1 className="text-lg font-medium text-white">Calendar</h1>
-            <p className="text-xs text-gray-400">
-              {format(date, "MMMM yyyy")}
-            </p>
+    <MentorFeatureGuard feature="session management">
+      <div className="flex h-full flex-col bg-[#0B0E14]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="text-gray-400 h-5 w-5" />
+            <div>
+              <h1 className="text-lg font-medium text-white">Calendar</h1>
+              <p className="text-xs text-gray-400">
+                {format(date, "MMMM yyyy")}
+              </p>
+            </div>
           </div>
-        </div>
-        
-        {mentorProfileId && (
-          <div className="flex items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAvailability(!showAvailability)}
-              className={`text-xs border-[rgba(255,255,255,0.2)] ${showAvailability ? 'bg-blue-500/20 text-blue-400' : 'bg-transparent'}`}
-            >
-              {showAvailability ? 'Hide Availability' : 'Show Availability'}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Calendar */}
-      <div className="flex-1 h-[calc(100vh-5rem)] overflow-hidden">
-        <Calendar
-          events={calendarEvents}
-          onSelectEvent={handleEventSelect}
-          onSelectSlot={handleSlotSelect}
-          isEditable={true}
-          view={view}
-          onViewChange={handleViewChange}
-          date={date}
-          onNavigate={handleNavigate}
-          mentorProfileId={mentorProfileId}
-          showAvailability={showAvailability}
-        />
-      </div>
-
-      {/* Session details dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-[#0B0E14] border-0 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Session Details</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              View and manage session information
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedSession && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-xs text-gray-400 mb-1">Title</h3>
-                <p className="text-sm">{selectedSession.title}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-xs text-gray-400 mb-1">Start Time</h3>
-                  <p className="text-sm">
-                    {format(new Date(selectedSession.startTime), "PPp")}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-xs text-gray-400 mb-1">End Time</h3>
-                  <p className="text-sm">
-                    {format(new Date(selectedSession.endTime), "PPp")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-xs text-gray-400 mb-1">Mentor</h3>
-                  <p className="text-sm">{selectedSession.mentorProfile.user.name}</p>
-                </div>
-                <div>
-                  <h3 className="text-xs text-gray-400 mb-1">Mentee</h3>
-                  <p className="text-sm">{selectedSession.mentee.name}</p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs text-gray-400 mb-1">Status</h3>
-                <div>
-                  <Badge variant={getStatusBadgeVariant(selectedSession.status)}>
-                    {selectedSession.status}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(255,255,255,0.06)]">
-                {selectedSession.status === "PENDING" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        handleSessionUpdate(selectedSession.id, "CANCELLED")
-                      }
-                      className="border-red-500 text-red-500 hover:bg-red-500/10"
-                    >
-                      Decline
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        handleSessionUpdate(selectedSession.id, "CONFIRMED")
-                      }
-                      className="bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      Confirm
-                    </Button>
-                  </>
-                )}
-                {selectedSession.status === "CONFIRMED" && (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        handleSessionUpdate(selectedSession.id, "CANCELLED")
-                      }
-                      className="border-red-500 text-red-500 hover:bg-red-500/10"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        handleSessionUpdate(selectedSession.id, "COMPLETED")
-                      }
-                      className="bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      Complete
-                    </Button>
-                  </>
-                )}
-              </div>
+          
+          {mentorProfileId && (
+            <div className="flex items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAvailability(!showAvailability)}
+                className={`text-xs border-[rgba(255,255,255,0.2)] ${showAvailability ? 'bg-blue-500/20 text-blue-400' : 'bg-transparent'}`}
+              >
+                {showAvailability ? 'Hide Availability' : 'Show Availability'}
+              </Button>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
 
-      {/* Add event dialog */}
-      <AddEventDialog
-        isOpen={isAddEventDialogOpen}
-        onClose={() => setIsAddEventDialogOpen(false)}
-        selectedSlot={selectedSlot}
-        onEventAdd={handleAddEvent}
-      />
-    </div>
+        {/* Calendar */}
+        <div className="flex-1 h-[calc(100vh-5rem)] overflow-hidden">
+          <Calendar
+            events={calendarEvents}
+            onSelectEvent={handleEventSelect}
+            onSelectSlot={handleSlotSelect}
+            isEditable={true}
+            view={view}
+            onViewChange={handleViewChange}
+            date={date}
+            onNavigate={handleNavigate}
+            mentorProfileId={mentorProfileId}
+            showAvailability={showAvailability}
+          />
+        </div>
+
+        {/* Session details dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="bg-[#0B0E14] border-0 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Session Details</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                View and manage session information
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedSession && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs text-gray-400 mb-1">Title</h3>
+                  <p className="text-sm">{selectedSession.title}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-xs text-gray-400 mb-1">Start Time</h3>
+                    <p className="text-sm">
+                      {format(new Date(selectedSession.startTime), "PPp")}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-xs text-gray-400 mb-1">End Time</h3>
+                    <p className="text-sm">
+                      {format(new Date(selectedSession.endTime), "PPp")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-xs text-gray-400 mb-1">Mentor</h3>
+                    <p className="text-sm">{selectedSession.mentorProfile.user.name}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-xs text-gray-400 mb-1">Mentee</h3>
+                    <p className="text-sm">{selectedSession.mentee.name}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xs text-gray-400 mb-1">Status</h3>
+                  <div>
+                    <Badge variant={getStatusBadgeVariant(selectedSession.status)}>
+                      {selectedSession.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(255,255,255,0.06)]">
+                  {selectedSession.status === "PENDING" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          handleSessionUpdate(selectedSession.id, "CANCELLED")
+                        }
+                        className="border-red-500 text-red-500 hover:bg-red-500/10"
+                      >
+                        Decline
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          handleSessionUpdate(selectedSession.id, "CONFIRMED")
+                        }
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Confirm
+                      </Button>
+                    </>
+                  )}
+                  {selectedSession.status === "CONFIRMED" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          handleSessionUpdate(selectedSession.id, "CANCELLED")
+                        }
+                        className="border-red-500 text-red-500 hover:bg-red-500/10"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          handleSessionUpdate(selectedSession.id, "COMPLETED")
+                        }
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Complete
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add event dialog */}
+        <AddEventDialog
+          isOpen={isAddEventDialogOpen}
+          onClose={() => setIsAddEventDialogOpen(false)}
+          selectedSlot={selectedSlot}
+          onEventAdd={handleAddEvent}
+        />
+      </div>
+    </MentorFeatureGuard>
   );
 }
 

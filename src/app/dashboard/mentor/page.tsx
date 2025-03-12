@@ -9,19 +9,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
-  ArrowRight,
-  ArrowUpRight,
-  Calendar,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  DollarSign,
-  MessageSquare,
-  MoreHorizontal,
-  Star,
-  Timer,
-  User,
-  Users
+    ArrowRight,
+    ArrowUpRight,
+    Calendar,
+    CheckCircle2,
+    ChevronRight,
+    Clock,
+    DollarSign,
+    MessageSquare,
+    MoreHorizontal,
+    Star,
+    Timer,
+    User,
+    Users
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
