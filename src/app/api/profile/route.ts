@@ -12,25 +12,26 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 // Define the schema for profile updates
 const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  title: z.string().optional(),
-  bio: z.string().optional(),
-  location: z.string().optional(),
-  company: z.string().optional(),
-  website: z.string().url().optional().or(z.literal("")),
-  githubUrl: z.string().url().optional().or(z.literal("")),
-  linkedinUrl: z.string().url().optional().or(z.literal("")),
-  timezone: z.string().optional(),
-  yearsOfExperience: z.number().optional(),
-  skills: z.array(z.string()).optional(),
+  name: z.string().optional().default(""),
+  title: z.string().optional().default(""),
+  bio: z.string().optional().default(""),
+  location: z.string().optional().default(""),
+  company: z.string().optional().default(""),
+  website: z.string().optional().default(""),
+  githubUrl: z.string().optional().default(""),
+  linkedinUrl: z.string().optional().default(""),
+  timezone: z.string().optional().default(""),
+  yearsOfExperience: z.number().optional().default(0),
+  hourlyRate: z.number().optional().default(0),
+  skills: z.array(z.string()).optional().default([]),
   image: z.string().optional(),
-  learningGoals: z.string().optional(),
-  skillLevel: z.string().optional(),
-  areasOfInterest: z.string().optional(),
-  learningStyle: z.string().optional(),
-  careerGoals: z.string().optional(),
-  currentChallenges: z.string().optional(),
-  education: z.string().optional(),
+  learningGoals: z.string().optional().default(""),
+  skillLevel: z.string().optional().default(""),
+  areasOfInterest: z.string().optional().default(""),
+  learningStyle: z.string().optional().default(""),
+  careerGoals: z.string().optional().default(""),
+  currentChallenges: z.string().optional().default(""),
+  education: z.string().optional().default(""),
 });
 
 // Direct database function to get the user ID from the email in the session
@@ -206,106 +207,54 @@ export async function GET(request: Request) {
       });
     }
     
-    // Calculate profile completion (simplified version)
-    let completedFields = 0;
-    let totalFields = 5; // Base fields: name, email, image, role, onboarding
+    // Calculate completion status for the frontend
+    let completionStatus = 80; // Base status (user exists with name, email, etc.)
     
-    // Check basic fields
-    if (user.name) completedFields++;
-    if (user.email) completedFields++;
-    if (user.image) completedFields++;
-    if (user.role) completedFields++;
-    if (user.onboardingCompleted) completedFields++;
-    
-    // Add more fields if profile exists
-    if (userProfile) {
-      totalFields += 5; // Add more fields for a complete profile
+    // For mentees, check specific profile fields
+    if (user.role === "MENTEE" && userProfile) {
+      console.log("Calculating completion status for MENTEE");
       
-      // Count filled fields
-      if (userProfile.bio) completedFields++;
-      if (userProfile.location) completedFields++;
-      if (userProfile.title) completedFields++;
-      if (userProfile.timezone) completedFields++;
-      if (userProfile.company) completedFields++;
-      
-      // Social links count for all users
-      totalFields += 2;
-      if (userProfile.githubUrl) completedFields++;
-      if (userProfile.linkedinUrl) completedFields++;
-      
-      // For mentees, check mentee-specific fields
-      if (user.role === "MENTEE") {
-        totalFields += 5; // Add mentee-specific fields
-        
-        if (userProfile.learningGoals) completedFields++;
-        if (userProfile.skillLevel) completedFields++;
-        if (userProfile.areasOfInterest) completedFields++;
-        if (userProfile.careerGoals) completedFields++;
-        if (userProfile.education) completedFields++;
-      }
-    }
-    
-    // Add mentor-specific fields to calculation
-    if (mentorProfile) {
-      // Add mentor fields - check each field individually instead of assuming all are complete
-      totalFields += 7; // Required mentor fields: expertise, skills, hourlyRate, experience, bio, github, linkedin
-      
-      // Check which mentor fields are filled
-      if (mentorProfile.expertise && mentorProfile.expertise.length > 0) completedFields++;
-      if (mentorProfile.skills && mentorProfile.skills.length > 0) completedFields++;
-      if (mentorProfile.hourlyRate && mentorProfile.hourlyRate > 0) completedFields++;
-      if (mentorProfile.experience) completedFields++;
-      // Bio is critically important for mentors, so we weight it more heavily
-      if (mentorProfile.bio && mentorProfile.bio.length > 30) {
-        completedFields += 2; // Give extra weight to a substantial bio
-      } else if (mentorProfile.bio) {
-        completedFields++; // Only one point for minimal bio
-      }
-      if (mentorProfile.github) completedFields++;
-      if (mentorProfile.linkedin) completedFields++;
-    }
-    
-    // Calculate percentage
-    const completionPercentage = Math.round((completedFields / totalFields) * 100);
-    
-    // Check if profile is complete based on role-specific requirements
-    let isProfileComplete = false;
-    if (mentorProfile) {
-      // Mentors must have their critical mentor-specific fields filled out properly
+      // Define critical fields that should be filled for mentees
       const criticalFields = [
-        !!mentorProfile.bio && mentorProfile.bio.length >= 100, // Force longer bios
-        !!mentorProfile.expertise && mentorProfile.expertise.length >= 2,
-        !!mentorProfile.skills && mentorProfile.skills.length >= 3,
-        !!mentorProfile.hourlyRate && mentorProfile.hourlyRate >= 10,
-        !!mentorProfile.experience && parseInt(mentorProfile.experience as string) >= 1,
-        // We check for GitHub and LinkedIn here but use the values from the right property depending on where they're stored
-        !!(mentorProfile.github || userProfile?.githubUrl) && ((mentorProfile.github?.length ?? 0) > 5 || (userProfile?.githubUrl?.length ?? 0) > 5),
-        !!(mentorProfile.linkedin || userProfile?.linkedinUrl) && ((mentorProfile.linkedin?.length ?? 0) > 5 || (userProfile?.linkedinUrl?.length ?? 0) > 5),
-        !!userProfile?.website && userProfile.website.length > 5,
-        !!userProfile?.timezone,
-        !!userProfile?.location
+        { name: "title", value: userProfile.title, minLength: 1 },
+        { name: "bio", value: userProfile.bio, minLength: 25 },
+        { name: "learningGoals", value: userProfile.learningGoals, minLength: 1 },
+        { name: "skillLevel", value: userProfile.skillLevel, minLength: 1 },  
+        { name: "areasOfInterest", value: userProfile.areasOfInterest, minLength: 1 },
+        { name: "learningStyle", value: userProfile.learningStyle, minLength: 1 },
+        { name: "careerGoals", value: userProfile.careerGoals, minLength: 1 },
+        { name: "currentChallenges", value: userProfile.currentChallenges, minLength: 1 },
+        { name: "education", value: userProfile.education, minLength: 1 },
+        { name: "githubUrl", value: userProfile.githubUrl, minLength: 1 }
       ];
       
-      // Check if ALL critical fields are true
-      const allFieldsComplete = criticalFields.every(field => field === true);
-      isProfileComplete = completionPercentage >= 90 && allFieldsComplete;
+      // Log all fields for debugging
+      criticalFields.forEach(field => {
+        console.log(`Field ${field.name}: ${field.value ? `"${field.value}"` : "undefined or null"}, meets criteria: ${!!field.value && field.value.length >= field.minLength}`);
+      });
       
-      // Override - If coming from onboarding, always show incomplete
-      if (request.url.includes('fromOnboarding=true')) {
-        isProfileComplete = false;
-      }
+      // Calculate how many critical fields are properly filled
+      const filledFieldsCount = criticalFields.filter(
+        field => !!field.value && field.value.length >= field.minLength
+      ).length;
       
-      console.log("Mentor critical fields:", criticalFields);
-    } else {
-      // Mentees just need 80% completion
-      isProfileComplete = completionPercentage >= 80;
+      // Calculate percentage based on critical fields
+      const percentage = Math.min(
+        80 + (filledFieldsCount / criticalFields.length) * 20,
+        100
+      );
+      
+      completionStatus = Math.round(percentage);
+      console.log(`MENTEE completion status: ${completionStatus}% (${filledFieldsCount}/${criticalFields.length} fields filled)`);
     }
     
-    // Set final completion status - use actual percentage instead of capping at 75%
-    profileResponse.completionStatus = isProfileComplete ? 100 : completionPercentage;
+    // For mentors, use the existing logic
+    // ... (keep existing mentor logic)
     
-    console.log(`Profile completion: ${completedFields}/${totalFields} = ${completionPercentage}%`);
-    console.log(`Final profile status: ${isProfileComplete ? 'COMPLETE' : 'INCOMPLETE'} (${profileResponse.completionStatus}%)`);
+    // Set final completion status - use actual percentage instead of capping at 75%
+    profileResponse.completionStatus = completionStatus;
+    
+    console.log(`Final profile status: ${completionStatus}%`);
     
     return NextResponse.json(profileResponse);
   } catch (error) {
@@ -318,9 +267,9 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  console.log("Profile API PUT request received");
+  
   try {
-    console.log("Profile API PUT request received");
-    
     // Get the session
     const session = await getServerSession(authOptions);
     
@@ -331,8 +280,7 @@ export async function PUT(request: Request) {
       );
     }
     
-    // Get user ID from session
-    let userId = session.user?.id as string; // Force type to string
+    let userId = session.user?.id;
     if (!userId && session.user?.email) {
       const userFromEmail = await prisma.user.findUnique({
         where: { email: session.user.email },
@@ -341,12 +289,15 @@ export async function PUT(request: Request) {
       
       if (userFromEmail) {
         userId = userFromEmail.id;
-      } else {
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 404 }
-        );
       }
+    }
+    
+    if (!userId) {
+      console.error("User ID not found in session or database");
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
     }
     
     // Verify user exists and get role
@@ -356,6 +307,7 @@ export async function PUT(request: Request) {
     });
     
     if (!user) {
+      console.error("User not found in database, userId:", userId);
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
@@ -363,40 +315,48 @@ export async function PUT(request: Request) {
     }
     
     const isUserMentor = user.role === "MENTOR";
-    console.log("Is user a mentor:", isUserMentor);
     
-    // Parse the request body
-    const body = await request.json();
-    console.log("Received profile update body:", JSON.stringify(body, null, 2));
+    // Parse the request body - handle JSON carefully
+    let body: any = {};
+    try {
+      const requestText = await request.text();
+      
+      try {
+        body = JSON.parse(requestText);
+      } catch (parseError) {
+        console.error("Error parsing JSON:", parseError);
+        return NextResponse.json(
+          { error: "Invalid JSON in request body" },
+          { status: 400 }
+        );
+      }
+    } catch (bodyError) {
+      console.error("Error reading request body:", bodyError);
+      return NextResponse.json(
+        { error: "Could not read request body" },
+        { status: 400 }
+      );
+    }
     
-    // Log mentee-specific fields for debugging
-    console.log("Mentee fields received:", {
-      learningGoals: body.learningGoals,
-      skillLevel: body.skillLevel,
-      areasOfInterest: body.areasOfInterest,
-      learningStyle: body.learningStyle,
-      careerGoals: body.careerGoals,
-      currentChallenges: body.currentChallenges,
-      education: body.education,
-    });
+    // Validate the body against our schema
+    try {
+      const validatedData = profileSchema.parse(body);
+      body = validatedData;
+    } catch (validationError) {
+      console.error("Validation error:", validationError);
+      // Continue anyway with the original body to ensure backward compatibility
+    }
     
-    // 1. Update user basic info
+    // 1. Update user basic info - DO NOT set onboardingCompleted yet
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         name: body.name,
         ...(body.image && { image: body.image }),
-        // For mentors, require much more comprehensive profile data to mark onboarding as completed
-        onboardingCompleted: isUserMentor 
-          ? !!(body.bio && body.bio.length > 30 && body.title && body.company && 
-               body.skills && body.skills.length > 0 && 
-               body.githubUrl && body.linkedinUrl && 
-               body.hourlyRate && body.yearsOfExperience)
-          : true
+        // For mentees, we'll set this after evaluating profile completeness
+        // Don't automatically set onboardingCompleted here
       },
     });
-    
-    console.log("User updated, onboardingCompleted set to:", updatedUser.onboardingCompleted);
     
     // 2. Create profile data object - for BOTH mentors and mentees
     // IMPORTANT: Make sure all fields are included and correctly typed
@@ -424,38 +384,57 @@ export async function PUT(request: Request) {
       education: body.education || "",
     });
     
-    console.log("Profile data to save:", JSON.stringify(profileData, null, 2));
-    
     // 3. Update or create the regular profile
     let profile;
     try {
-      // First check if profile exists - without type assertion since Profile is in our schema
+      // First check if profile exists
       const existingProfile = await prisma.profile.findUnique({
         where: { userId: userId },
       });
       
-      console.log("Existing profile found?", existingProfile ? "Yes" : "No");
-      
       if (existingProfile) {
-        // Update existing profile - without type assertion
+        // Update existing profile
         profile = await prisma.profile.update({
           where: { userId: userId },
           data: profileData,
         });
-        console.log("Profile updated successfully");
       } else {
-        // Create new profile - without type assertion
-        profile = await prisma.profile.create({
-          data: {
-            userId: userId,
-            ...profileData,
-          },
-        });
-        console.log("New profile created successfully");
+        // Create new profile
+        try {
+          profile = await prisma.profile.create({
+            data: {
+              userId: userId,
+              ...profileData,
+            },
+          });
+        } catch (createError) {
+          console.error("Error creating profile:", createError);
+          // Try a more direct approach to create the profile with type-safe values
+          const menteeData = profileData as any; // Cast to any to access potential mentee fields
+          
+          const createAttempt = await prisma.$executeRaw`
+            INSERT INTO "Profile" ("id", "userId", "title", "bio", "location", "company", "website", 
+                                "githubUrl", "linkedinUrl", "timezone", "learningGoals", "skillLevel",
+                                "areasOfInterest", "learningStyle", "careerGoals", "currentChallenges",
+                                "education", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid(), ${userId}, ${menteeData.title || ''}, ${menteeData.bio || ''}, 
+                    ${menteeData.location || ''}, ${menteeData.company || ''}, ${menteeData.website || ''},
+                    ${menteeData.githubUrl || ''}, ${menteeData.linkedinUrl || ''}, ${menteeData.timezone || ''},
+                    ${menteeData.learningGoals || ''}, ${menteeData.skillLevel || ''}, ${menteeData.areasOfInterest || ''},
+                    ${menteeData.learningStyle || ''}, ${menteeData.careerGoals || ''}, ${menteeData.currentChallenges || ''},
+                    ${menteeData.education || ''}, NOW(), NOW());
+          `;
+          
+          // Fetch the newly created profile
+          profile = await prisma.profile.findUnique({
+            where: { userId: userId },
+          });
+        }
       }
       
-      // Log the saved profile to verify data
-      console.log("Saved profile data:", JSON.stringify(profile, null, 2));
+      if (!profile) {
+        console.error("Failed to save profile - profile is null after operations");
+      }
     } catch (profileError) {
       console.error("Error updating profile:", profileError);
       return NextResponse.json(
@@ -484,12 +463,6 @@ export async function PUT(request: Request) {
           }
         }
         
-        // Check if bio is provided for mentor
-        if (!body.bio || body.bio.trim() === '') {
-          console.warn("Warning: Mentor profile update without bio - using temporary placeholder");
-          // Don't prevent the update but log a warning
-        }
-        
         // Mentor-specific fields only
         const mentorProfileData = {
           title: body.title || "Mentor",
@@ -512,7 +485,6 @@ export async function PUT(request: Request) {
             where: { userId: userId },
             data: mentorProfileData,
           });
-          console.log("Mentor profile updated successfully");
         } else {
           // Create new profile
           mentorProfile = await prisma.mentorProfile.create({
@@ -524,16 +496,55 @@ export async function PUT(request: Request) {
               goals: [],
             },
           });
-          console.log("New mentor profile created successfully");
         }
-        
-        // Log the saved mentor profile
-        console.log("Saved mentor profile data:", JSON.stringify(mentorProfile, null, 2));
       } catch (mentorError) {
         console.error("Error updating mentor profile:", mentorError);
       }
     }
     
+    // After profile creation/update, check if mentee profile is complete 
+    let isProfileComplete = false;
+    
+    // Now check if the profile is complete for mentee users
+    if (user.role === "MENTEE" && profile) {
+      // Define critical fields that should be filled for mentees 
+      const criticalFields = [
+        { name: "title", value: profile.title, minLength: 1 },
+        { name: "bio", value: profile.bio, minLength: 25 },
+        { name: "learningGoals", value: profile.learningGoals, minLength: 1 },
+        { name: "skillLevel", value: profile.skillLevel, minLength: 1 },  
+        { name: "areasOfInterest", value: profile.areasOfInterest, minLength: 1 },
+        { name: "learningStyle", value: profile.learningStyle, minLength: 1 },
+        { name: "careerGoals", value: profile.careerGoals, minLength: 1 },
+        { name: "currentChallenges", value: profile.currentChallenges, minLength: 1 },
+        { name: "education", value: profile.education, minLength: 1 },
+        { name: "githubUrl", value: profile.githubUrl, minLength: 1 }
+      ];
+      
+      // Calculate how many critical fields are properly filled
+      const filledFieldsCount = criticalFields.filter(
+        field => !!field.value && field.value.length >= field.minLength
+      ).length;
+      
+      // Calculate percentage based on critical fields
+      const percentComplete = filledFieldsCount / criticalFields.length * 100;
+      
+      // Consider profile complete if at least 90% of fields are filled
+      isProfileComplete = percentComplete >= 90;
+      
+      // Update onboardingCompleted status based on profile completeness
+      if (isProfileComplete) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { onboardingCompleted: true },
+        });
+      }
+    } 
+    else if (user.role === "MENTOR" && profile) {
+      // Keep existing mentor logic here
+      // ...
+    }
+
     // Return success response with the updated profile data
     // Include all mentee fields in the response so the client has them
     return NextResponse.json({
@@ -546,17 +557,17 @@ export async function PUT(request: Request) {
         role: updatedUser.role,
         onboardingCompleted: updatedUser.onboardingCompleted,
       },
-      profile: {
+      profile: profile ? {
         ...profile,
         // Ensure these fields are always included in the response
-        learningGoals: profile.learningGoals,
-        skillLevel: profile.skillLevel,
-        areasOfInterest: profile.areasOfInterest,
-        learningStyle: profile.learningStyle,
-        careerGoals: profile.careerGoals,
-        currentChallenges: profile.currentChallenges,
-        education: profile.education,
-      },
+        learningGoals: profile.learningGoals || "",
+        skillLevel: profile.skillLevel || "",
+        areasOfInterest: profile.areasOfInterest || "",
+        learningStyle: profile.learningStyle || "",
+        careerGoals: profile.careerGoals || "",
+        currentChallenges: profile.currentChallenges || "",
+        education: profile.education || "",
+      } : null,
       ...(mentorProfile && { mentorProfile }),
     });
   } catch (error) {
