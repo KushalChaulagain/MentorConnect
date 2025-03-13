@@ -214,7 +214,7 @@ export async function GET(request: Request) {
     if (user.role === "MENTEE" && userProfile) {
       console.log("Calculating completion status for MENTEE");
       
-      // Define critical fields that should be filled for mentees
+      // Define critical fields that should be filled for mentees - company is not required for mentees
       const criticalFields = [
         { name: "title", value: userProfile.title, minLength: 1 },
         { name: "bio", value: userProfile.bio, minLength: 25 },
@@ -227,11 +227,6 @@ export async function GET(request: Request) {
         { name: "education", value: userProfile.education, minLength: 1 },
         { name: "githubUrl", value: userProfile.githubUrl, minLength: 1 }
       ];
-      
-      // Log all fields for debugging
-      criticalFields.forEach(field => {
-        console.log(`Field ${field.name}: ${field.value ? `"${field.value}"` : "undefined or null"}, meets criteria: ${!!field.value && field.value.length >= field.minLength}`);
-      });
       
       // Calculate how many critical fields are properly filled
       const filledFieldsCount = criticalFields.filter(
@@ -247,11 +242,50 @@ export async function GET(request: Request) {
       completionStatus = Math.round(percentage);
       console.log(`MENTEE completion status: ${completionStatus}% (${filledFieldsCount}/${criticalFields.length} fields filled)`);
     }
+    // For mentors, check mentor-specific fields
+    else if (user.role === "MENTOR") {
+      console.log("Calculating completion status for MENTOR");
+      
+      // Define critical fields that should be filled for mentors
+      const mentorCriticalFields = [
+        { name: "title", value: userProfile?.title, minLength: 1 },
+        { name: "bio", value: userProfile?.bio, minLength: 50 }, // Require more substantial bio for mentors
+        { name: "location", value: userProfile?.location, minLength: 1 },
+        { name: "company", value: userProfile?.company, minLength: 1 },
+        { name: "githubUrl", value: userProfile?.githubUrl || mentorProfile?.github, minLength: 5 },
+        { name: "linkedinUrl", value: userProfile?.linkedinUrl || mentorProfile?.linkedin, minLength: 5 },
+        { name: "skills", value: mentorProfile?.skills?.length ? "has-skills" : "", minLength: 1, 
+          customCheck: () => (mentorProfile?.skills?.length || 0) >= 3 }, // At least 3 skills required
+        { name: "hourlyRate", customCheck: () => (mentorProfile?.hourlyRate || 0) >= 10 } // Require minimum hourly rate
+      ];
+      
+      // Log all fields for debugging
+      mentorCriticalFields.forEach(field => {
+        if (field.customCheck) {
+          console.log(`Field ${field.name}: ${field.customCheck() ? "PASS" : "FAIL"} (custom check)`);
+        } else {
+          const value = typeof field.value === 'string' ? field.value : JSON.stringify(field.value);
+          console.log(`Field ${field.name}: ${value ? `"${value}"` : "undefined or null"}, meets criteria: ${!!field.value && field.value.length >= (field.minLength || 1)}`);
+        }
+      });
+      
+      // Calculate how many critical fields are properly filled
+      const filledFieldsCount = mentorCriticalFields.filter(field => {
+        if (field.customCheck) return field.customCheck();
+        return !!field.value && field.value.length >= (field.minLength || 1);
+      }).length;
+      
+      // Calculate percentage based on critical fields (80% base + 20% for fields)
+      const percentage = Math.min(
+        80 + (filledFieldsCount / mentorCriticalFields.length) * 20,
+        100
+      );
+      
+      completionStatus = Math.round(percentage);
+      console.log(`MENTOR completion status: ${completionStatus}% (${filledFieldsCount}/${mentorCriticalFields.length} fields filled)`);
+    }
     
-    // For mentors, use the existing logic
-    // ... (keep existing mentor logic)
-    
-    // Set final completion status - use actual percentage instead of capping at 75%
+    // Set final completion status
     profileResponse.completionStatus = completionStatus;
     
     console.log(`Final profile status: ${completionStatus}%`);
@@ -507,7 +541,8 @@ export async function PUT(request: Request) {
     
     // Now check if the profile is complete for mentee users
     if (user.role === "MENTEE" && profile) {
-      // Define critical fields that should be filled for mentees 
+      // Define critical fields that should be filled for mentees
+      // Company is not required for mentees - only for mentors
       const criticalFields = [
         { name: "title", value: profile.title, minLength: 1 },
         { name: "bio", value: profile.bio, minLength: 25 },
@@ -539,10 +574,42 @@ export async function PUT(request: Request) {
           data: { onboardingCompleted: true },
         });
       }
-    } 
+    }
+    // For mentors, check mentor-specific criteria
     else if (user.role === "MENTOR" && profile) {
-      // Keep existing mentor logic here
-      // ...
+      // Define critical fields that should be filled for mentors
+      const mentorCriticalFields = [
+        { name: "title", value: profile.title, minLength: 1 },
+        { name: "bio", value: profile.bio, minLength: 50 }, // Require more substantial bio for mentors
+        { name: "location", value: profile.location, minLength: 1 },
+        { name: "company", value: profile.company, minLength: 1 },
+        { name: "githubUrl", value: profile.githubUrl || mentorProfile?.github, minLength: 5 },
+        { name: "linkedinUrl", value: profile.linkedinUrl || mentorProfile?.linkedin, minLength: 5 },
+        { name: "skills", customCheck: () => (mentorProfile?.skills?.length || 0) >= 3 }, // At least 3 skills
+        { name: "hourlyRate", customCheck: () => (mentorProfile?.hourlyRate || 0) >= 10 } // Minimum rate
+      ];
+      
+      // Calculate how many critical fields are properly filled
+      const filledFieldsCount = mentorCriticalFields.filter(field => {
+        if (field.customCheck) return field.customCheck();
+        return !!field.value && field.value.length >= (field.minLength || 1);
+      }).length;
+      
+      // Calculate percentage based on critical fields
+      const percentComplete = filledFieldsCount / mentorCriticalFields.length * 100;
+      
+      // Consider profile complete if at least 90% of fields are filled
+      isProfileComplete = percentComplete >= 90;
+      
+      console.log(`MENTOR profile completion during update: ${Math.round(percentComplete)}% (${filledFieldsCount}/${mentorCriticalFields.length} fields filled)`);
+      
+      // Update onboardingCompleted status based on profile completeness
+      if (isProfileComplete) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { onboardingCompleted: true },
+        });
+      }
     }
 
     // Return success response with the updated profile data
