@@ -364,27 +364,27 @@ export function MessagesComponent() {
     <div className="h-[calc(100vh-6rem)]">
       <div className="grid grid-cols-12 h-full gap-4">
         {/* Contacts List */}
-        <Card className="col-span-4 bg-white dark:bg-gray-800">
-          <CardHeader className="p-4 space-y-4">
+        <Card className="col-span-4 bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+          <CardHeader className="p-4 space-y-4 border-b border-gray-200 dark:border-gray-700">
             <CardTitle className="text-xl">Messages</CardTitle>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search messages..." className="pl-8" />
+              <Input placeholder="Search messages..." className="pl-8 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800" />
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {items.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-0.5">
                 {items.map((item) => {
                   const otherUser = getOtherUser(item);
                   return (
                     <div
                       key={item.id}
                       onClick={() => setSelectedItem(item)}
-                      className={`p-4 cursor-pointer transition-colors ${
+                      className={`p-4 cursor-pointer transition-colors border-l-2 ${
                         selectedItem?.id === item.id
-                          ? "bg-indigo-50 dark:bg-indigo-900/20"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          ? "bg-indigo-50 dark:bg-indigo-900/20 border-l-indigo-500"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-transparent"
                       }`}
                     >
                       <div className="flex items-center gap-4">
@@ -429,13 +429,13 @@ export function MessagesComponent() {
         </Card>
 
         {/* Chat Area */}
-        <Card className="col-span-8 bg-white dark:bg-gray-800">
+        <Card className="col-span-8 bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col">
           {selectedItem ? (
             <>
-              <CardHeader className="p-4 border-b">
+              <CardHeader className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 border border-gray-200 dark:border-gray-600">
                       <AvatarImage 
                         src={getOtherUser(selectedItem).image} 
                         alt={getOtherUser(selectedItem).name} 
@@ -451,6 +451,7 @@ export function MessagesComponent() {
                       variant="ghost" 
                       size="icon"
                       onClick={() => startCall(false)}
+                      className="rounded-full h-9 w-9 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <Phone className="h-4 w-4" />
                       <span className="sr-only">Audio Call</span>
@@ -459,6 +460,7 @@ export function MessagesComponent() {
                       variant="ghost" 
                       size="icon"
                       onClick={() => startCall(true)}
+                      className="rounded-full h-9 w-9 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <Video className="h-4 w-4" />
                       <span className="sr-only">Video Call</span>
@@ -466,7 +468,7 @@ export function MessagesComponent() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-0 flex flex-col h-[calc(100%-8rem)]">
+              <CardContent className="p-0 flex flex-col h-[calc(100%-8rem)] bg-gray-50 dark:bg-gray-900/50">
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messages.map((message) => (
                     <div
@@ -478,16 +480,16 @@ export function MessagesComponent() {
                       }`}
                     >
                       {message.senderId !== session?.user?.id && (
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-8 w-8 border border-gray-200 dark:border-gray-600">
                           <AvatarImage src={message.sender.image} alt={message.sender.name} />
                           <AvatarFallback>{message.sender.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                       )}
                       <div
-                        className={`rounded-lg px-3 py-2 max-w-[70%] ${
+                        className={`rounded-lg px-3 py-2 max-w-[70%] shadow-sm border ${
                           message.senderId === session?.user?.id
-                            ? "bg-indigo-500 text-white"
-                            : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+                            ? "bg-indigo-500 text-white border-indigo-600"
+                            : "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700"
                         }`}
                       >
                         <p className="text-sm">{message.content}</p>
@@ -499,7 +501,7 @@ export function MessagesComponent() {
                         </p>
                       </div>
                       {message.senderId === session?.user?.id && (
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-8 w-8 border border-gray-200 dark:border-gray-600">
                           <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
                           <AvatarFallback>{session.user.name?.charAt(0) || "U"}</AvatarFallback>
                         </Avatar>
@@ -509,14 +511,18 @@ export function MessagesComponent() {
                   <div ref={messagesEndRef} />
                 </div>
                 <div className="p-4 border-t">
-                  <form onSubmit={sendMessage} className="flex gap-2">
+                  <form onSubmit={sendMessage} className="flex gap-2 items-center">
                     <Input
                       placeholder="Type a message..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      className="flex-1"
+                      className="flex-1 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 rounded-full h-12 px-4 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                     />
-                    <Button type="submit" size="icon">
+                    <Button 
+                      type="submit" 
+                      size="icon" 
+                      className="h-10 w-10 rounded-full bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
                       <Send className="h-4 w-4" />
                       <span className="sr-only">Send</span>
                     </Button>
