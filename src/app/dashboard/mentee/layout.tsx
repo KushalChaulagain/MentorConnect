@@ -1,6 +1,5 @@
 'use client';
 
-import MenteeProfileCompletionCheck from "@/components/MenteeProfileCompletionCheck";
 import React from "react";
 
 interface MenteeDashboardLayoutProps {
@@ -10,9 +9,5 @@ interface MenteeDashboardLayoutProps {
 export default function MenteeDashboardLayout({
   children,
 }: MenteeDashboardLayoutProps) {
-  return (
-    <MenteeProfileCompletionCheck>
-      {children}
-    </MenteeProfileCompletionCheck>
-  );
+  return <>{children}</>;
 } 
