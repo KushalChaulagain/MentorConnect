@@ -1,16 +1,13 @@
 'use client';
 
-import MentorProfileCompletionCheck from "@/components/MentorProfileCompletionCheck";
-import { ReactNode } from "react";
+import React from "react";
+
+interface MentorDashboardLayoutProps {
+  children: React.ReactNode;
+}
 
 export default function MentorDashboardLayout({
   children,
-}: {
-  children: ReactNode;
-}) {
-  return (
-    <MentorProfileCompletionCheck>
-      {children}
-    </MentorProfileCompletionCheck>
-  );
+}: MentorDashboardLayoutProps) {
+  return <>{children}</>;
 } 

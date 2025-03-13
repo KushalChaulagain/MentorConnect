@@ -1,4 +1,4 @@
-import MenteeProfileCompletionCheck from "@/components/MenteeProfileCompletionCheck";
+import ProfileCompletionCheck from "@/components/ProfileCompletionCheck";
 import React from "react";
 
 interface MenteeFeatureGuardProps {
@@ -9,8 +9,8 @@ export default function MenteeFeatureGuard({
   children,
 }: MenteeFeatureGuardProps) {
   return (
-    <MenteeProfileCompletionCheck requiredForContent={true}>
+    <ProfileCompletionCheck type="MENTEE" requiredForContent={true}>
       {children}
-    </MenteeProfileCompletionCheck>
+    </ProfileCompletionCheck>
   );
 } 

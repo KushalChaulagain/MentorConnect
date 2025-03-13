@@ -1,4 +1,4 @@
-import MentorProfileCompletionCheck from "@/components/MentorProfileCompletionCheck";
+import ProfileCompletionCheck from "@/components/ProfileCompletionCheck";
 
 interface MentorFeatureGuardProps {
   children: React.ReactNode;
@@ -7,8 +7,8 @@ interface MentorFeatureGuardProps {
 
 export default function MentorFeatureGuard({ children, feature }: MentorFeatureGuardProps) {
   return (
-    <MentorProfileCompletionCheck requiredForContent={true}>
+    <ProfileCompletionCheck type="MENTOR" requiredForContent={true}>
       {children}
-    </MentorProfileCompletionCheck>
+    </ProfileCompletionCheck>
   );
 } 
