@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -81,14 +82,38 @@ export default function MenteeProfileCompletionCheck({
               <p className="mt-1 text-indigo-700 dark:text-indigo-300">
                 Your mentee profile is incomplete. Please complete your profile to unlock full access to mentors and learning resources.
               </p>
-              <div className="mt-4">
-                <Button 
-                  onClick={() => router.push("/dashboard/profile/edit")}
-                  variant="outline" 
-                  className="border-indigo-300 dark:border-indigo-700 text-indigo-800 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
-                >
-                  Complete Profile
-                </Button>
+              <div className="mt-4 space-y-4">
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-yellow-800">
+                    Complete your mentee profile
+                  </h3>
+                  <p className="mt-2 text-sm text-yellow-700">
+                    You need to complete your profile to access all features.
+                  </p>
+                  <div className="mt-3">
+                    <ul className="list-disc pl-5 text-sm text-yellow-700 space-y-1">
+                      <li>Detailed Bio (at least 25 characters)</li>
+                      <li>Professional Title</li>
+                      <li>Learning Goals</li>
+                      <li>Skill Level</li>
+                      <li>Areas of Interest</li>
+                      <li>Learning Style</li>
+                      <li>Career Goals</li>
+                      <li>Current Challenges</li>
+                      <li>Education</li>
+                      <li>GitHub Profile</li>
+                      {/* Note: Company is not required for mentees */}
+                    </ul>
+                  </div>
+                  <div className="mt-4">
+                    <Link
+                      href="/dashboard/profile/edit"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Complete Your Profile
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

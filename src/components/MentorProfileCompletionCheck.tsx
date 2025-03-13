@@ -21,9 +21,10 @@ export default function MentorProfileCompletionCheck({
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const response = await fetch("/api/profile");
+        const response = await fetch("/api/profile?fromOnboarding=true");
         if (response.ok) {
           const data = await response.json();
+          console.log("Mentor profile data for completion check:", data);
           setProfileData(data);
         }
       } catch (error) {
@@ -90,10 +91,40 @@ export default function MentorProfileCompletionCheck({
       <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 p-6 rounded-lg mb-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h3 className="font-semibold text-amber-800 dark:text-amber-300">Complete your profile</h3>
+            <h3 className="font-semibold text-amber-800 dark:text-amber-300">Complete your mentor profile</h3>
             <p className="text-sm text-amber-700 dark:text-amber-400">
               Your mentor profile is incomplete. Complete it to access all features and become visible to potential mentees.
             </p>
+            
+            <div className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+              <p className="font-medium">Required for a complete profile:</p>
+              <ul className="list-disc ml-5 mt-1 space-y-1">
+                {!profileData?.bio || profileData.bio.length < 50 ? (
+                  <li>Add a detailed bio (at least 50 characters)</li>
+                ) : null}
+                {!profileData?.title ? (
+                  <li>Add your professional title</li>
+                ) : null}
+                {!profileData?.location ? (
+                  <li>Add your location</li>
+                ) : null}
+                {!profileData?.company ? (
+                  <li>Add your company/organization</li>
+                ) : null}
+                {(!profileData?.githubUrl && !profileData?.mentorProfile?.github) ? (
+                  <li>Add your GitHub profile</li>
+                ) : null}
+                {(!profileData?.linkedinUrl && !profileData?.mentorProfile?.linkedin) ? (
+                  <li>Add your LinkedIn profile</li>
+                ) : null}
+                {!profileData?.mentorProfile?.skills || profileData.mentorProfile.skills.length < 3 ? (
+                  <li>Add at least 3 skills</li>
+                ) : null}
+                {!profileData?.mentorProfile?.hourlyRate || profileData.mentorProfile.hourlyRate < 10 ? (
+                  <li>Set your hourly rate (minimum Rs. 10)</li>
+                ) : null}
+              </ul>
+            </div>
           </div>
           <Button 
             onClick={() => router.push("/dashboard/profile/edit")}
