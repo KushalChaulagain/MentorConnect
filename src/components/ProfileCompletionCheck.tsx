@@ -7,6 +7,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+// Define more precise types instead of using 'any'
+interface ProfileData {
+  name?: string;
+  bio?: string;
+  expertise?: string[];
+  completionStatus?: number | string;
+  mentorProfile?: {
+    title?: string;
+    hourlyRate?: number;
+    yearsOfExperience?: number;
+    skills?: string[];
+    isVerified?: boolean;
+  };
+  menteeProfile?: {
+    goals?: string;
+    interests?: string[];
+    isVerified?: boolean;
+  };
+}
+
 interface ProfileCompletionCheckProps {
   children: React.ReactNode;
   requiredForContent?: boolean; // If true, children will only be shown if profile is complete
@@ -20,7 +40,7 @@ export default function ProfileCompletionCheck({
 }: ProfileCompletionCheckProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [componentReady, setComponentReady] = useState(false);
   
@@ -128,7 +148,6 @@ export default function ProfileCompletionCheck({
       
     return (
       <>
-        {/* Modern styled banner according to cursor UI rules */}
         <div className="mb-6 ml-10 mr-4 overflow-hidden rounded-xl bg-gradient-to-r from-[#1A1C26] to-[#181A24] border border-[#3949AB]/30 shadow-lg">
           <div className="relative px-4 py-4 sm:px-6">
             <div className="flex items-start">
@@ -210,7 +229,7 @@ export default function ProfileCompletionCheck({
 }
 
 // Helper functions
-function getMissingFields(profileData: any, isMentor: boolean): string[] {
+function getMissingFields(profileData: ProfileData | null, isMentor: boolean): string[] {
   if (!profileData) return [];
   
   // If user has a verified flag, immediately return empty array (no missing fields)
