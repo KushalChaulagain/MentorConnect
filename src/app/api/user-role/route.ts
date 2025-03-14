@@ -1,11 +1,11 @@
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth-config";
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 // Create a new PrismaClient instance if it doesn't exist in global scope
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+const prisma = globalForPrisma.prisma || new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 

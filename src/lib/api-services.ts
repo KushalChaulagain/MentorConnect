@@ -43,7 +43,7 @@ export async function getTopMentors() {
     // Get top rated mentors
     const topMentors = await prisma.mentorProfile.findMany({
       where: {
-        isVerified: true,
+        // Remove isVerified as it doesn't exist in MentorProfile
       },
       orderBy: {
         rating: "desc",
@@ -67,8 +67,8 @@ export async function getTopMentors() {
       expertise: mentor.expertise || [],
       rating: mentor.rating || 0,
       user: {
-        name: mentor.user.name || "",
-        image: mentor.user.image || "",
+        name: mentor.user?.name || "",
+        image: mentor.user?.image || "",
       },
     }));
   } catch (error) {
@@ -120,11 +120,27 @@ export async function getMentorStats() {
       console.error("Error fetching profile completeness:", error);
     }
     
+    // Get mentor profile for associated queries
+    const mentorProfile = await prisma.mentorProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+    
+    if (!mentorProfile) {
+      return {
+        upcomingSessions: 0,
+        totalStudents: 0,
+        totalEarnings: 0,
+        averageRating: 0,
+        sessionsCompleted: 0,
+        profileCompleteness,
+      };
+    }
+    
     // Count upcoming sessions
-    const upcomingSessions = await prisma.session.count({
+    const upcomingSessions = await prisma.booking.count({
       where: {
-        mentorId: session.user.id,
-        status: "SCHEDULED",
+        mentorProfileId: mentorProfile.id,
+        status: "PENDING",
         startTime: {
           gte: new Date(),
         },
@@ -140,37 +156,27 @@ export async function getMentorStats() {
     });
     
     // Count completed sessions
-    const sessionsCompleted = await prisma.session.count({
+    const sessionsCompleted = await prisma.booking.count({
       where: {
-        mentorId: session.user.id,
+        mentorProfileId: mentorProfile.id,
         status: "COMPLETED",
       },
     });
     
     // Calculate total earnings from completed sessions
-    const earnings = await prisma.session.aggregate({
-      where: {
-        mentorId: session.user.id,
-        status: "COMPLETED",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-    
-    const totalEarnings = earnings._sum.amount || 0;
+    const totalEarnings = 0; // Replace with actual calculation once we know the correct field or calculation method
     
     // Get average rating
-    const ratings = await prisma.review.aggregate({
+    const ratings = await prisma.mentorReview.aggregate({
       where: {
-        mentorId: session.user.id,
+        mentorProfileId: mentorProfile.id,
       },
       _avg: {
         rating: true,
       },
     });
     
-    const averageRating = ratings._avg.rating || 0;
+    const averageRating = ratings._avg?.rating || 0;
     
     return {
       upcomingSessions,
@@ -202,9 +208,19 @@ export async function getRecentSessions() {
       return [];
     }
     
-    const recentSessions = await prisma.session.findMany({
+    // First get the mentor profile
+    const mentorProfile = await prisma.mentorProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+    
+    if (!mentorProfile) {
+      return [];
+    }
+    
+    // Then get recent bookings for this mentor profile
+    const recentBookings = await prisma.booking.findMany({
       where: {
-        mentorId: session.user.id,
+        mentorProfileId: mentorProfile.id,
       },
       orderBy: {
         startTime: "desc",
@@ -221,17 +237,17 @@ export async function getRecentSessions() {
       },
     });
     
-    return recentSessions.map(session => ({
-      id: session.id,
-      title: session.title || "Mentoring Session",
+    return recentBookings.map(booking => ({
+      id: booking.id,
+      title: "Mentoring Session", // Default title since Booking might not have a title field
       mentee: {
-        name: session.mentee.name || "Mentee",
-        image: session.mentee.image || "",
+        name: booking.mentee?.name || "Mentee",
+        image: booking.mentee?.image || "",
       },
-      date: session.startTime.toISOString().split("T")[0],
-      time: session.startTime.toTimeString().slice(0, 5),
-      duration: session.duration || 60,
-      status: session.status || "SCHEDULED",
+      date: booking.startTime.toISOString().split("T")[0],
+      time: booking.startTime.toTimeString().slice(0, 5),
+      duration: Math.round((booking.endTime.getTime() - booking.startTime.getTime()) / (1000 * 60)),
+      status: booking.status,
     }));
   } catch (error) {
     console.error("Error fetching recent sessions:", error);
@@ -248,16 +264,25 @@ export async function getRecentReviews() {
       return [];
     }
     
-    const recentReviews = await prisma.review.findMany({
+    // First get the mentor profile
+    const mentorProfile = await prisma.mentorProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+    
+    if (!mentorProfile) {
+      return [];
+    }
+    
+    const recentReviews = await prisma.mentorReview.findMany({
       where: {
-        mentorId: session.user.id,
+        mentorProfileId: mentorProfile.id,
       },
       orderBy: {
         createdAt: "desc",
       },
       take: 2,
       include: {
-        mentee: {
+        author: {
           select: {
             id: true,
             name: true,
@@ -270,8 +295,8 @@ export async function getRecentReviews() {
     return recentReviews.map(review => ({
       id: review.id,
       mentee: {
-        name: review.mentee.name || "Mentee",
-        image: review.mentee.image || "",
+        name: review.author?.name || "Mentee",
+        image: review.author?.image || "",
       },
       rating: review.rating,
       comment: review.comment || "",

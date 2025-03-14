@@ -1,8 +1,8 @@
+import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import Pusher from 'pusher';
-import { authOptions } from '../../auth/[...nextauth]/route';
 
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID!,
