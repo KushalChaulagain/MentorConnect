@@ -89,8 +89,12 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
+
+    // Check if this is coming from onboarding
+    const url = new URL(request.url);
+    const fromOnboarding = url.searchParams.get('fromOnboarding') === 'true';
     
-    // Fetch user from database with specific fields only to avoid missing column errors
+    // Fetch user from database
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -99,7 +103,7 @@ export async function GET(request: Request) {
         email: true,
         image: true,
         role: true,
-        onboardingCompleted: true
+        onboardingCompleted: true,
       }
     });
     
@@ -110,36 +114,58 @@ export async function GET(request: Request) {
       );
     }
     
-    // Check for MentorProfile
+    // Fetch mentor profile if user is a mentor
     let mentorProfile = null;
-    try {
+    if (user.role === 'MENTOR') {
       mentorProfile = await prisma.mentorProfile.findUnique({
-        where: { userId: userId },
+        where: { userId: user.id }
       });
-      console.log("Mentor profile found:", mentorProfile ? "Yes" : "No");
-    } catch (mentorError) {
-      console.error("Error fetching mentor profile:", mentorError);
-      // Continue without mentor profile
     }
     
-    // Check for regular profile using raw Prisma query to avoid TS errors
+    // Fetch user profile data
+    // Using any to bypass TypeScript errors as the Profile model might not be in types
     let userProfile = null;
     try {
-      // @ts-ignore - We know this model exists despite type errors
       userProfile = await (prisma as any).profile.findUnique({
-        where: { userId: userId },
+        where: { userId: user.id }
       });
-      console.log("User profile found:", userProfile ? "Yes" : "No");
-      if (userProfile) {
-        console.log("Profile data:", JSON.stringify(userProfile, null, 2));
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      // Continue with null userProfile
+    }
+    
+    // Create a structured profile response
+    const finalUserProfile = userProfile || {};
+    
+    // If the user is a mentor, merge in mentorProfile data for any missing fields
+    if (user.role === 'MENTOR' && mentorProfile) {
+      // Map mentorProfile fields to userProfile equivalent fields if userProfile fields are empty
+      if (!finalUserProfile.bio && mentorProfile.bio) {
+        finalUserProfile.bio = mentorProfile.bio;
       }
-    } catch (profileError) {
-      console.error("Error fetching user profile:", profileError);
-      console.error("This may mean the Profile model hasn't been created yet. Run 'npx prisma db push'");
+      
+      if (!finalUserProfile.title && mentorProfile.title) {
+        finalUserProfile.title = mentorProfile.title;
+      }
+      
+      if (!finalUserProfile.company && mentorProfile.company) {
+        finalUserProfile.company = mentorProfile.company;
+      }
+      
+      if (!finalUserProfile.githubUrl && mentorProfile.github) {
+        finalUserProfile.githubUrl = mentorProfile.github;
+      }
+      
+      if (!finalUserProfile.linkedinUrl && mentorProfile.linkedin) {
+        finalUserProfile.linkedinUrl = mentorProfile.linkedin;
+      }
+      
+      if (!finalUserProfile.website && mentorProfile.website) {
+        finalUserProfile.website = mentorProfile.website;
+      }
     }
     
     // Try to retrieve timezone and location from localStorage via API query params
-    const url = new URL(request.url);
     const savedTimezone = url.searchParams.get('savedTimezone') || "";
     const savedLocation = url.searchParams.get('savedLocation') || "";
     console.log("URL params - timezone:", savedTimezone, "location:", savedLocation);
@@ -150,59 +176,59 @@ export async function GET(request: Request) {
       name: user.name || "",
       email: user.email || "",
       image: user.image || "",
-      role: user.role || "MENTEE",
+      role: user.role,
       onboardingCompleted: user.onboardingCompleted || false,
       completionStatus: 0, // Will be calculated below
-      isMentor: !!mentorProfile,
-      timezone: userProfile?.timezone || savedTimezone || "",
-      location: userProfile?.location || savedLocation || "",
+      isMentor: user.role === "MENTOR",
+      timezone: finalUserProfile?.timezone || savedTimezone || "",
+      location: finalUserProfile?.location || savedLocation || "",
       // Add empty values for all fields to ensure they appear in the response
-      title: userProfile?.title || "",
-      bio: userProfile?.bio || "",
-      company: userProfile?.company || "",
-      website: userProfile?.website || "",
+      title: finalUserProfile?.title || "",
+      bio: finalUserProfile?.bio || "",
+      company: finalUserProfile?.company || "",
+      website: finalUserProfile?.website || "",
       // Get githubUrl and linkedinUrl from regular profile if available
-      githubUrl: userProfile?.githubUrl || "",
-      linkedinUrl: userProfile?.linkedinUrl || "",
+      githubUrl: finalUserProfile?.githubUrl || "",
+      linkedinUrl: finalUserProfile?.linkedinUrl || "",
       yearsOfExperience: 0,
       // Mentee fields with better logging
-      learningGoals: userProfile?.learningGoals || "",
-      skillLevel: userProfile?.skillLevel || "",
-      areasOfInterest: userProfile?.areasOfInterest || "",
-      learningStyle: userProfile?.learningStyle || "",
-      careerGoals: userProfile?.careerGoals || "",
-      currentChallenges: userProfile?.currentChallenges || "",
-      education: userProfile?.education || "",
+      learningGoals: finalUserProfile?.learningGoals || "",
+      skillLevel: finalUserProfile?.skillLevel || "",
+      areasOfInterest: finalUserProfile?.areasOfInterest || "",
+      learningStyle: finalUserProfile?.learningStyle || "",
+      careerGoals: finalUserProfile?.careerGoals || "",
+      currentChallenges: finalUserProfile?.currentChallenges || "",
+      education: finalUserProfile?.education || "",
     };
     
     console.log("User profile data being used:", {
-      githubUrl: userProfile?.githubUrl,
-      linkedinUrl: userProfile?.linkedinUrl,
-      learningGoals: userProfile?.learningGoals,
-      skillLevel: userProfile?.skillLevel,
-      areasOfInterest: userProfile?.areasOfInterest,
-      learningStyle: userProfile?.learningStyle,
-      careerGoals: userProfile?.careerGoals,
-      currentChallenges: userProfile?.currentChallenges,
-      education: userProfile?.education
+      githubUrl: finalUserProfile?.githubUrl,
+      linkedinUrl: finalUserProfile?.linkedinUrl,
+      learningGoals: finalUserProfile?.learningGoals,
+      skillLevel: finalUserProfile?.skillLevel,
+      areasOfInterest: finalUserProfile?.areasOfInterest,
+      learningStyle: finalUserProfile?.learningStyle,
+      careerGoals: finalUserProfile?.careerGoals,
+      currentChallenges: finalUserProfile?.currentChallenges,
+      education: finalUserProfile?.education
     });
     
     // Add mentor-specific data if this user is a mentor
-    if (mentorProfile) {
+    if (user.role === "MENTOR") {
       console.log("Adding mentor profile data to response:", {
-        github: mentorProfile.github,
-        linkedin: mentorProfile.linkedin
+        github: mentorProfile?.github,
+        linkedin: mentorProfile?.linkedin
       });
       
       Object.assign(profileResponse, {
         // Fix naming mismatch between database and form
-        githubUrl: mentorProfile.github || "", // database stores as 'github', form uses 'githubUrl'
-        linkedinUrl: mentorProfile.linkedin || "", // database stores as 'linkedin', form uses 'linkedinUrl'
-        expertise: mentorProfile.expertise || [],
-        skills: mentorProfile.skills || [],
-        hourlyRate: mentorProfile.hourlyRate || 0,
+        githubUrl: mentorProfile?.github || "", // database stores as 'github', form uses 'githubUrl'
+        linkedinUrl: mentorProfile?.linkedin || "", // database stores as 'linkedin', form uses 'linkedinUrl'
+        expertise: mentorProfile?.skills || [],
+        skills: mentorProfile?.skills || [],
+        hourlyRate: mentorProfile?.hourlyRate || 0,
         // Ensure yearsOfExperience is properly converted to a number from the string in the database
-        yearsOfExperience: mentorProfile.experience ? 
+        yearsOfExperience: mentorProfile?.experience ? 
           (typeof mentorProfile.experience === 'string' ? parseInt(mentorProfile.experience) : mentorProfile.experience) : 0,
       });
     }
@@ -211,21 +237,21 @@ export async function GET(request: Request) {
     let completionStatus = 80; // Base status (user exists with name, email, etc.)
     
     // For mentees, check specific profile fields
-    if (user.role === "MENTEE" && userProfile) {
+    if (user.role === "MENTEE" && finalUserProfile) {
       console.log("Calculating completion status for MENTEE");
       
       // Define critical fields that should be filled for mentees - company is not required for mentees
       const criticalFields = [
-        { name: "title", value: userProfile.title, minLength: 1 },
-        { name: "bio", value: userProfile.bio, minLength: 25 },
-        { name: "learningGoals", value: userProfile.learningGoals, minLength: 1 },
-        { name: "skillLevel", value: userProfile.skillLevel, minLength: 1 },  
-        { name: "areasOfInterest", value: userProfile.areasOfInterest, minLength: 1 },
-        { name: "learningStyle", value: userProfile.learningStyle, minLength: 1 },
-        { name: "careerGoals", value: userProfile.careerGoals, minLength: 1 },
-        { name: "currentChallenges", value: userProfile.currentChallenges, minLength: 1 },
-        { name: "education", value: userProfile.education, minLength: 1 },
-        { name: "githubUrl", value: userProfile.githubUrl, minLength: 1 }
+        { name: "title", value: finalUserProfile.title, minLength: 1 },
+        { name: "bio", value: finalUserProfile.bio, minLength: 25 },
+        { name: "learningGoals", value: finalUserProfile.learningGoals, minLength: 1 },
+        { name: "skillLevel", value: finalUserProfile.skillLevel, minLength: 1 },  
+        { name: "areasOfInterest", value: finalUserProfile.areasOfInterest, minLength: 1 },
+        { name: "learningStyle", value: finalUserProfile.learningStyle, minLength: 1 },
+        { name: "careerGoals", value: finalUserProfile.careerGoals, minLength: 1 },
+        { name: "currentChallenges", value: finalUserProfile.currentChallenges, minLength: 1 },
+        { name: "education", value: finalUserProfile.education, minLength: 1 },
+        { name: "githubUrl", value: finalUserProfile.githubUrl, minLength: 1 }
       ];
       
       // Calculate how many critical fields are properly filled
@@ -248,12 +274,12 @@ export async function GET(request: Request) {
       
       // Define critical fields that should be filled for mentors
       const mentorCriticalFields = [
-        { name: "title", value: userProfile?.title, minLength: 1 },
-        { name: "bio", value: userProfile?.bio, minLength: 50 }, // Require more substantial bio for mentors
-        { name: "location", value: userProfile?.location, minLength: 1 },
-        { name: "company", value: userProfile?.company, minLength: 1 },
-        { name: "githubUrl", value: userProfile?.githubUrl || mentorProfile?.github, minLength: 5 },
-        { name: "linkedinUrl", value: userProfile?.linkedinUrl || mentorProfile?.linkedin, minLength: 5 },
+        { name: "title", value: finalUserProfile?.title, minLength: 1 },
+        { name: "bio", value: finalUserProfile?.bio, minLength: 50 }, // Require more substantial bio for mentors
+        { name: "location", value: finalUserProfile?.location, minLength: 1 },
+        { name: "company", value: finalUserProfile?.company, minLength: 1 },
+        { name: "githubUrl", value: finalUserProfile?.githubUrl || mentorProfile?.github, minLength: 5 },
+        { name: "linkedinUrl", value: finalUserProfile?.linkedinUrl || mentorProfile?.linkedin, minLength: 5 },
         { name: "skills", value: mentorProfile?.skills?.length ? "has-skills" : "", minLength: 1, 
           customCheck: () => (mentorProfile?.skills?.length || 0) >= 3 }, // At least 3 skills required
         { name: "hourlyRate", customCheck: () => (mentorProfile?.hourlyRate || 0) >= 10 } // Require minimum hourly rate
