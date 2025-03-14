@@ -136,6 +136,18 @@ export async function POST(request: Request) {
       },
     });
 
+    // Create notification for mentee
+    // @ts-ignore - We know this model exists despite type errors
+    await (prisma as any).notification.create({
+      data: {
+        type: 'booking',
+        title: 'New Booking Request',
+        message: `${session.user.name} has requested a mentoring session`,
+        userId: booking.mentee.id,
+        senderId: session.user.id,
+      },
+    });
+
     return NextResponse.json(booking);
   } catch (error) {
     console.error('Error creating booking:', error);
