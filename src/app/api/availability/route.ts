@@ -46,23 +46,36 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { day, slots } = body;
 
-    // Update or create availability for the day
-    const availability = await prisma.availability.upsert({
+    // First, try to find the existing availability
+    const existingAvailability = await prisma.availability.findFirst({
       where: {
-        mentorProfileId_day: {
-          mentorProfileId: user.mentorProfile.id,
-          day,
-        },
-      },
-      update: {
-        slots,
-      },
-      create: {
         mentorProfileId: user.mentorProfile.id,
         day,
-        slots,
       },
     });
+
+    let availability;
+    
+    if (existingAvailability) {
+      // Update existing availability
+      availability = await prisma.availability.update({
+        where: {
+          id: existingAvailability.id,
+        },
+        data: {
+          slots,
+        },
+      });
+    } else {
+      // Create new availability
+      availability = await prisma.availability.create({
+        data: {
+          mentorProfileId: user.mentorProfile.id,
+          day,
+          slots,
+        },
+      });
+    }
 
     return NextResponse.json(availability);
   } catch (error) {
