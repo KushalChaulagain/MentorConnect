@@ -6,14 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
-    Bell,
-    Calendar,
-    CalendarCheck,
-    DollarSign,
-    MessageSquare,
-    Star,
-    UserCheck
+  Bell,
+  Calendar,
+  CalendarCheck,
+  DollarSign,
+  MessageSquare,
+  Star,
+  UserCheck
 } from "lucide-react";
 import { Session } from "next-auth";
 import Link from "next/link";
@@ -22,8 +23,12 @@ import { useState } from "react";
 // Temporary component until we build the actual one
 function ConnectionNotifications() {
   return (
-    <Button variant="outline" size="icon" className="rounded-full">
-      <Bell className="h-4 w-4" />
+    <Button 
+      variant="outline" 
+      size="icon" 
+      className="rounded-full hover:scale-105 transition-transform duration-300 bg-opacity-20 bg-gradient-to-r from-indigo-500 to-indigo-600"
+    >
+      <Bell className="h-4 w-4 text-indigo-200" />
     </Button>
   );
 }
@@ -77,26 +82,31 @@ export default function MentorDashboardClient({
   const [recentReviews] = useState<Review[]>(initialReviews);
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {session?.user?.name?.split(' ')[0]}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-light tracking-tight text-white">
+            Welcome back, <span className="font-semibold text-[#00C6FF]">{session?.user?.name?.split(' ')[0]}</span>
+          </h1>
+          <p className="text-muted-foreground text-[16px] leading-relaxed">
             Here's what's happening with your mentoring
           </p>
         </div>
         <ConnectionNotifications />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-[#111218] border-0 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 shadow-md">
+          <div className="absolute h-1 w-full bg-gradient-to-r from-indigo-600 to-blue-400 top-0"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-white">Upcoming Sessions</CardTitle>
+            <div className="rounded-full bg-[#3949AB]/10 p-2">
+              <Calendar className="h-4 w-4 text-[#00C6FF]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.upcomingSessions}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-white">{stats.upcomingSessions}</div>
+            <p className="text-xs text-[#E0E0E0] mt-1">
               {stats.upcomingSessions === 0 
                 ? "No upcoming sessions" 
                 : stats.upcomingSessions === 1 
@@ -106,14 +116,17 @@ export default function MentorDashboardClient({
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-[#111218] border-0 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 shadow-md">
+          <div className="absolute h-1 w-full bg-gradient-to-r from-blue-400 to-cyan-400 top-0"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-white">Total Students</CardTitle>
+            <div className="rounded-full bg-[#3949AB]/10 p-2">
+              <UserCheck className="h-4 w-4 text-[#00C6FF]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalStudents}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-white">{stats.totalStudents}</div>
+            <p className="text-xs text-[#E0E0E0] mt-1">
               {stats.totalStudents === 0 
                 ? "No students yet" 
                 : stats.totalStudents === 1 
@@ -123,16 +136,19 @@ export default function MentorDashboardClient({
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-[#111218] border-0 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 shadow-md">
+          <div className="absolute h-1 w-full bg-gradient-to-r from-cyan-400 to-teal-400 top-0"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-white">Total Earnings</CardTitle>
+            <div className="rounded-full bg-[#3949AB]/10 p-2">
+              <DollarSign className="h-4 w-4 text-[#00C6FF]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-white">
               ${stats.totalEarnings.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#E0E0E0] mt-1">
               {stats.sessionsCompleted === 0 
                 ? "No completed sessions" 
                 : stats.sessionsCompleted === 1 
@@ -142,25 +158,28 @@ export default function MentorDashboardClient({
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-[#111218] border-0 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 shadow-md">
+          <div className="absolute h-1 w-full bg-gradient-to-r from-teal-400 to-green-400 top-0"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-white">Average Rating</CardTitle>
+            <div className="rounded-full bg-[#3949AB]/10 p-2">
+              <Star className="h-4 w-4 text-[#00C6FF]" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageRating.toFixed(1)}</div>
-            <div className="flex items-center">
+            <div className="text-3xl font-bold text-white">{stats.averageRating.toFixed(1)}</div>
+            <div className="flex items-center mt-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  className={`h-3 w-3 ${
+                  className={`h-4 w-4 ${
                     star <= Math.round(stats.averageRating)
-                      ? "fill-primary text-primary"
-                      : "text-muted-foreground"
+                      ? "text-yellow-400 fill-yellow-400"
+                      : "text-gray-600"
                   }`}
                 />
               ))}
-              <span className="ml-1 text-xs text-muted-foreground">
+              <span className="ml-2 text-xs text-[#E0E0E0]">
                 ({stats.averageRating.toFixed(1)})
               </span>
             </div>
@@ -168,58 +187,82 @@ export default function MentorDashboardClient({
         </Card>
       </div>
 
-      <Tabs defaultValue="sessions" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="sessions">Recent Sessions</TabsTrigger>
-          <TabsTrigger value="reviews">Recent Reviews</TabsTrigger>
+      <Tabs defaultValue="sessions" className="space-y-6">
+        <TabsList className="bg-[#111218] p-1 rounded-xl border border-gray-800">
+          <TabsTrigger 
+            value="sessions" 
+            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#3949AB] data-[state=active]:to-[#4A5BC7] data-[state=active]:text-white transition-all duration-300"
+          >
+            Recent Sessions
+          </TabsTrigger>
+          <TabsTrigger 
+            value="reviews" 
+            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#3949AB] data-[state=active]:to-[#4A5BC7] data-[state=active]:text-white transition-all duration-300"
+          >
+            Recent Reviews
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="sessions" className="space-y-4">
+        <TabsContent value="sessions" className="space-y-5">
           {recentSessions.length === 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>No Recent Sessions</CardTitle>
-                <CardDescription>
+            <Card className="bg-[#111218] border border-gray-800 rounded-xl p-6 text-center">
+              <div className="py-8 flex flex-col items-center">
+                <div className="rounded-full bg-[#3949AB]/10 p-6 mb-4">
+                  <Calendar className="h-10 w-10 text-[#00C6FF] opacity-70" />
+                </div>
+                <CardTitle className="text-xl text-white mb-2">No Recent Sessions</CardTitle>
+                <CardDescription className="max-w-md mb-6 text-[#E0E0E0] text-[15px] leading-relaxed">
                   You haven't had any sessions yet. Schedule with your mentees to get started.
                 </CardDescription>
-              </CardHeader>
-              <CardFooter>
-                <Button asChild variant="outline">
+                <Button 
+                  asChild 
+                  className="bg-gradient-to-r from-[#3949AB] to-[#4A5BC7] hover:brightness-110 transition-all border-0 text-white px-6 py-2 rounded-lg"
+                >
                   <Link href="/dashboard/mentor/schedule">
                     View Schedule
                   </Link>
                 </Button>
-              </CardFooter>
+              </div>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {recentSessions.map((session) => (
-                <Card key={session.id}>
+                <Card key={session.id} className="bg-[#111218] border border-gray-800 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardHeader className="flex flex-row items-start justify-between space-y-0">
                     <div>
-                      <CardTitle>{session.title}</CardTitle>
-                      <CardDescription>
+                      <CardTitle className="text-lg text-white">{session.title}</CardTitle>
+                      <CardDescription className="text-[#E0E0E0]">
                         {session.date} • {session.time} • {session.duration} min
                       </CardDescription>
                     </div>
-                    <Badge variant={session.status === "COMPLETED" ? "secondary" : "default"}>
+                    <Badge 
+                      variant={session.status === "COMPLETED" ? "secondary" : "default"}
+                      className={cn(
+                        "rounded-full px-3",
+                        session.status === "COMPLETED" 
+                          ? "bg-green-500/20 text-green-400 border-green-500/30" 
+                          : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                      )}
+                    >
                       {session.status}
                     </Badge>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10 border border-gray-700">
                         <AvatarImage src={session.mentee.image} alt={session.mentee.name} />
-                        <AvatarFallback>{session.mentee.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="bg-[#3949AB]/20 text-[#00C6FF]">
+                          {session.mentee.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
-                      <div className="font-medium">{session.mentee.name}</div>
+                      <div className="font-medium text-white">{session.mentee.name}</div>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between">
+                  <CardFooter className="flex justify-between gap-2 border-t border-gray-800 pt-4">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="text-xs"
+                      className="flex-1 text-xs border-gray-700 bg-transparent hover:bg-[#3949AB]/10 hover:text-[#00C6FF] transition-colors"
                       asChild
                     >
                       <Link href={`/dashboard/mentor/messages?connectionId=${session.id}`}>
@@ -230,7 +273,7 @@ export default function MentorDashboardClient({
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="text-xs"
+                      className="flex-1 text-xs border-gray-700 bg-transparent hover:bg-[#3949AB]/10 hover:text-[#00C6FF] transition-colors"
                       asChild
                     >
                       <Link href={`/dashboard/mentor/sessions/${session.id}`}>
@@ -245,46 +288,51 @@ export default function MentorDashboardClient({
           )}
         </TabsContent>
         
-        <TabsContent value="reviews" className="space-y-4">
+        <TabsContent value="reviews" className="space-y-5">
           {recentReviews.length === 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>No Reviews Yet</CardTitle>
-                <CardDescription>
+            <Card className="bg-[#111218] border border-gray-800 rounded-xl p-6 text-center">
+              <div className="py-8 flex flex-col items-center">
+                <div className="rounded-full bg-[#3949AB]/10 p-6 mb-4">
+                  <Star className="h-10 w-10 text-[#00C6FF] opacity-70" />
+                </div>
+                <CardTitle className="text-xl text-white mb-2">No Reviews Yet</CardTitle>
+                <CardDescription className="max-w-md text-[#E0E0E0] text-[15px] leading-relaxed">
                   You haven't received any reviews yet. Complete sessions with your mentees to get reviews.
                 </CardDescription>
-              </CardHeader>
+              </div>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               {recentReviews.map((review) => (
-                <Card key={review.id}>
+                <Card key={review.id} className="bg-[#111218] border border-gray-800 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
                   <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10 border border-gray-700">
                         <AvatarImage src={review.mentee.image} alt={review.mentee.name} />
-                        <AvatarFallback>{review.mentee.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="bg-[#3949AB]/20 text-[#00C6FF]">
+                          {review.mentee.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
-                        <CardTitle className="text-sm font-medium">{review.mentee.name}</CardTitle>
-                        <CardDescription className="text-xs">{review.date}</CardDescription>
+                        <CardTitle className="text-base font-medium text-white">{review.mentee.name}</CardTitle>
+                        <CardDescription className="text-xs text-[#E0E0E0]">{review.date}</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center space-x-1 mb-2">
+                    <div className="flex items-center space-x-1 mb-3">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
                           className={`h-4 w-4 ${
                             star <= review.rating
-                              ? "fill-primary text-primary"
-                              : "text-muted-foreground"
+                              ? "text-yellow-400 fill-yellow-400"
+                              : "text-gray-600"
                           }`}
                         />
                       ))}
                     </div>
-                    <p className="text-sm">"{review.comment}"</p>
+                    <p className="text-[15px] leading-relaxed text-[#E0E0E0] italic">"{review.comment}"</p>
                   </CardContent>
                 </Card>
               ))}
@@ -298,7 +346,6 @@ export default function MentorDashboardClient({
           { name: "Overview", href: "/dashboard/mentor" },
           { name: "Schedule", href: "/dashboard/mentor/schedule" },
           { name: "Messages", href: "/dashboard/mentor/messages" },
-          { name: "Profile", href: "/dashboard/mentor/profile" },
         ]}
       />
     </div>
