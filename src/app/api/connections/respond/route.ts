@@ -1,17 +1,8 @@
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { safeTriggerPusher } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import Pusher from 'pusher';
-
-// Initialize Pusher with proper error handling
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID || '',
-  key: process.env.NEXT_PUBLIC_PUSHER_KEY || '',
-  secret: process.env.PUSHER_SECRET || '',
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || '',
-  useTLS: true
-});
 
 export async function POST(req: Request) {
   try {
@@ -72,11 +63,15 @@ export async function POST(req: Request) {
 
     try {
       // Send notification to mentee
-      await pusher.trigger(`user-${request.menteeId}`, 'connection-response', {
-        connection: updatedConnection,
-        action,
-        message: `${request.mentor.name} has ${action}ed your connection request.`,
-      });
+      await safeTriggerPusher(
+        `user-${request.menteeId}`,
+        'connection-response',
+        {
+          connection: updatedConnection,
+          action,
+          message: `${request.mentor.name} has ${action}ed your connection request.`,
+        }
+      );
     } catch (error) {
       console.error('Pusher notification error:', error);
       // Continue execution even if notification fails

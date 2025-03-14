@@ -1,43 +1,8 @@
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { safeTriggerPusher } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import Pusher from 'pusher';
-
-// Validate environment variables first
-const requiredEnvVars = {
-  PUSHER_APP_ID: process.env.PUSHER_APP_ID,
-  NEXT_PUBLIC_PUSHER_APP_KEY: process.env.NEXT_PUBLIC_PUSHER_APP_KEY,
-  PUSHER_SECRET: process.env.PUSHER_SECRET,
-  NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-};
-
-const missingEnvVars = Object.entries(requiredEnvVars)
-  .filter(([_, value]) => !value)
-  .map(([key]) => key);
-
-if (missingEnvVars.length > 0) {
-  console.error('Missing required environment variables:', missingEnvVars);
-  throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
-}
-
-// Initialize Pusher with your credentials
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID!,
-  key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY!,
-  secret: process.env.PUSHER_SECRET!,
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-  useTLS: true,
-  host: `api-${process.env.NEXT_PUBLIC_PUSHER_CLUSTER}.pusher.com`,
-});
-
-// Log Pusher configuration on initialization
-console.log('Server Pusher configuration:', {
-  appId: process.env.PUSHER_APP_ID,
-  key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY,
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-  host: `api-${process.env.NEXT_PUBLIC_PUSHER_CLUSTER}.pusher.com`,
-});
 
 export async function POST(req: Request) {
   try {
@@ -130,8 +95,8 @@ export async function POST(req: Request) {
 
       // Trigger Pusher events for both chat and user channels
       await Promise.all([
-        pusher.trigger(channelName, 'new-message', eventData),
-        pusher.trigger(`user-${recipientId}`, 'new-message', eventData)
+        safeTriggerPusher(channelName, 'new-message', eventData),
+        safeTriggerPusher(`user-${recipientId}`, 'new-message', eventData)
       ]);
       
       console.log('Pusher events triggered successfully');
