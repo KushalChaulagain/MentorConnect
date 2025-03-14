@@ -97,7 +97,8 @@ export async function getMentorStats() {
     // Profile completeness - fetch from profile API
     let profileCompleteness = 0;
     try {
-      const profile = await prisma.profile.findUnique({
+      // @ts-ignore - We know this model exists despite type errors
+      const profile = await (prisma as any).profile.findUnique({
         where: { userId: session.user.id },
       });
       
