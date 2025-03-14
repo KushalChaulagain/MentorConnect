@@ -208,10 +208,9 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
   return (
     <Sidebar 
       variant="inset" 
-      className="rounded-xl overflow-hidden shadow-lg border-r" 
       {...props}
     >
-      <SidebarHeader className="p-4">
+      <SidebarHeader >
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
@@ -228,12 +227,12 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="px-2">
+      <SidebarContent >
         <NavMain items={navItems} />
         <NavProjects projects={projectItems} />
         <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t">
+      <SidebarFooter >
         <NavUser user={userData.user} />
       </SidebarFooter>
     </Sidebar>
