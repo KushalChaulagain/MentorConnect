@@ -1,11 +1,9 @@
-'use client';
-
-import { MessagesComponent } from '@/components/messages-component';
+import { MessagesClientComponent } from '@/components/messages-client-component';
 
 export default function MessagesPage() {
   return (
     <div className="h-full">
-      <MessagesComponent />
+      <MessagesClientComponent />
     </div>
   );
 } 

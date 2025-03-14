@@ -44,40 +44,46 @@ export function NavProjects({
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
-              <Link href={item.url} className="flex h-9 w-full items-center gap-2 rounded-md px-3 hover:bg-sidebar-hover">
+              <Link href={item.url} scroll={false}>
                 <item.icon />
                 <span>{item.name}</span>
               </Link>
             </SidebarMenuButton>
-            <SidebarMenuAction>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded size-6 hover:bg-sidebar-hover">
-                    <MoreHorizontal className="size-3.5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side={isMobile || window.innerWidth < 768 ? "bottom" : "right"}
-                  className="w-48"
-                >
-                  <DropdownMenuItem>
-                    <Folder className="mr-2 size-4" />
-                    <span>Add to Folder</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Share className="mr-2 size-4" />
-                    <span>Share</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Trash2 className="mr-2 size-4" />
-                    <span>Delete</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuAction showOnHover>
+                  <MoreHorizontal />
+                  <span className="sr-only">More</span>
+                </SidebarMenuAction>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-48"
+                side={isMobile ? "bottom" : "right"}
+                align={isMobile ? "end" : "start"}
+              >
+                <DropdownMenuItem>
+                  <Folder className="text-muted-foreground" />
+                  <span>View Project</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Share className="text-muted-foreground" />
+                  <span>Share Project</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Trash2 className="text-muted-foreground" />
+                  <span>Delete Project</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         ))}
+        <SidebarMenuItem>
+          <SidebarMenuButton>
+            <MoreHorizontal />
+            <span>More</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
       </SidebarMenu>
     </SidebarGroup>
   )

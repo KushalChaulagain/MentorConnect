@@ -17,6 +17,7 @@ import {
   Users
 } from "lucide-react"
 import { useSession } from "next-auth/react"
+import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 
@@ -43,8 +44,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ showMessages = false, setShowMessages, ...props }: AppSidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
-  const router = useRouter()
-  const { state } = useSidebar()
 
   const toggleMessages = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -63,13 +62,7 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
         if (setShowMessages) setShowMessages(false)
       }
     },
-    {
-      title: "Messages",
-      url: "#",
-      icon: MessageSquare,
-      isActive: showMessages,
-      onClick: toggleMessages
-    },
+   
     {
       title: "Sessions",
       url: "/dashboard/sessions",
@@ -98,6 +91,13 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
       }
     },
     {
+      title: "Messages",
+      url: "#",
+      icon: MessageSquare,
+      isActive: showMessages,
+      onClick: toggleMessages
+    },
+    {
       title: "Profile",
       url: "/dashboard/profile",
       icon: User,
@@ -106,7 +106,7 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
         if (setShowMessages) setShowMessages(false)
       }
     },
-  ], [pathname, showMessages, setShowMessages])
+  ], [pathname, showMessages, setShowMessages, toggleMessages])
 
   const getMenteeNavItems = React.useMemo(() => [
     {
@@ -117,13 +117,6 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
       onClick: () => {
         if (setShowMessages) setShowMessages(false)
       }
-    },
-    {
-      title: "Messages",
-      url: "#",
-      icon: MessageSquare,
-      isActive: showMessages,
-      onClick: toggleMessages
     },
     {
       title: "Find Mentors",
@@ -151,6 +144,13 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
       onClick: () => {
         if (setShowMessages) setShowMessages(false)
       }
+    },
+    {
+      title: "Messages",
+      url: "#",
+      icon: MessageSquare,
+      isActive: showMessages,
+      onClick: toggleMessages
     },
     {
       title: "Profile",
@@ -214,7 +214,7 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/">
+              <Link href="/">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
                   <Command className="size-4" />
                 </div>
@@ -222,7 +222,7 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
                   <span className="truncate font-semibold">MentorConnect</span>
                   <span className="truncate text-xs">{session?.user?.role || "User"}</span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -2,6 +2,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { Role } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { NextAuthOptions } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { db } from "./prisma";
@@ -167,4 +168,11 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
   },
-}; 
+};
+
+// Helper function to get the session on the server
+export async function auth() {
+  // We need to dynamically import the authOptions to avoid conflicts
+  const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+  return await getServerSession(authOptions);
+} 

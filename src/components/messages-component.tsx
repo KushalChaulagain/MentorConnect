@@ -361,7 +361,7 @@ export function MessagesComponent() {
   const items = isMentor ? connections : connections.length > 0 ? connections : bookings;
 
   return (
-    <div className="h-[calc(100vh-6rem)]">
+    <div className="h-[calc(100vh-6rem)] p-5">
       <div className="grid grid-cols-12 h-full gap-4">
         {/* Contacts List */}
         <Card className="col-span-4 bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
