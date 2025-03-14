@@ -1,10 +1,10 @@
 'use client';
-
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CallDialog } from "@/components/call/CallDialog";
 import { MessagesComponent } from "@/components/messages-component";
 import ProfileCompletionCheck from "@/components/ProfileCompletionCheck";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useSession } from "next-auth/react";
@@ -82,18 +82,28 @@ export default function DashboardLayout({
     <SidebarProvider>
       <AppSidebar showMessages={showMessages} setShowMessages={setShowMessages} />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-          <SidebarTrigger className="mr-2" />
-          <Separator orientation="vertical" className="h-4 mr-2" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{getPageTitle()}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      <header className="flex h-16 shrink-0 items-center gap-2">
+          <div className="flex items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="#">
+                  MentorConnect
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{getPageTitle()}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
         </header>
-        <div className="flex flex-1 flex-col p-4">
+        <main className="flex-1 overflow-hidden">
+          <ScrollArea className="h-[calc(100vh-5rem)]">
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {!showMessages && pathname.includes('/dashboard/mentor') && (
             <ProfileCompletionCheck type="MENTOR">
               {children}
@@ -111,8 +121,10 @@ export default function DashboardLayout({
             <div className="h-[calc(100vh-6rem)]">
               <MessagesComponent />
             </div>
-          )}
-        </div>
+          )}           
+           </div>
+          </ScrollArea>
+        </main>   
       </SidebarInset>
       
       {/* Call dialog */}
