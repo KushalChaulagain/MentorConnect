@@ -1,14 +1,7 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth-config";
+import { safeTriggerPusher } from "@/lib/pusher-server";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import Pusher from 'pusher';
-
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID!,
-  key: process.env.NEXT_PUBLIC_PUSHER_APP_KEY!,
-  secret: process.env.PUSHER_SECRET!,
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-});
 
 export async function POST(req: Request) {
   try {
@@ -25,7 +18,7 @@ export async function POST(req: Request) {
     }
 
     // Trigger a call event to the recipient
-    await pusher.trigger(`user-${recipientId}`, 'incoming-call', {
+    await safeTriggerPusher(`user-${recipientId}`, 'incoming-call', {
       channelName,
       isVideo,
       caller: {

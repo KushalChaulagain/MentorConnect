@@ -1,8 +1,8 @@
+import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { authOptions } from '../auth/[...nextauth]/route';
 
 const onboardingSchema = z.object({
   title: z.string(),

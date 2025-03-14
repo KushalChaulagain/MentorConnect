@@ -1,5 +1,5 @@
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { db } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth-config';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     // First, verify that the user exists
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 
     // Create or update mentor profile with proper error handling
     try {
-      const mentorProfile = await db.mentorProfile.upsert({
+      const mentorProfile = await prisma.mentorProfile.upsert({
         where: {
           userId: session.user.id,
         },
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       });
 
       // Update user's role and onboarding status
-      const updatedUser = await db.user.update({
+      const updatedUser = await prisma.user.update({
         where: {
           id: session.user.id,
         },

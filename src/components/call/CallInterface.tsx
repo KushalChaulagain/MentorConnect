@@ -2,7 +2,12 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import AgoraRTC, { ILocalVideoTrack, IAgoraRTCRemoteUser } from 'agora-rtc-sdk-ng';
+import AgoraRTC, {
+    IAgoraRTCRemoteUser,
+    ICameraVideoTrack,
+    ILocalVideoTrack,
+    IMicrophoneAudioTrack
+} from 'agora-rtc-sdk-ng';
 import { Expand, Mic, MicOff, Monitor, PhoneOff, Signal, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -24,8 +29,8 @@ interface CallStats {
 export function CallInterface({ channelName, isVideo, onEndCall }: CallInterfaceProps) {
   const [client, setClient] = useState<any>(null);
   const [localTracks, setLocalTracks] = useState<{
-    audioTrack?: IAgoraRTCRemoteUser['audioTrack'];
-    videoTrack?: IAgoraRTCRemoteUser['videoTrack'];
+    audioTrack?: IMicrophoneAudioTrack;
+    videoTrack?: ICameraVideoTrack;
   }>({});
   const [remoteUsers, setRemoteUsers] = useState<IAgoraRTCRemoteUser[]>([]);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -284,7 +289,7 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
         }
 
         // Set up event handlers with improved error handling
-        client.on('user-published', async (user, mediaType) => {
+        client.on('user-published', async (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
           if (!mountedRef.current) return;
           
           try {
@@ -315,14 +320,14 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
           }
         });
 
-        client.on('user-unpublished', (user, mediaType) => {
+        client.on('user-unpublished', (user: IAgoraRTCRemoteUser, mediaType: 'audio' | 'video') => {
           if (!mountedRef.current) return;
           if (mediaType === 'video') {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
           }
         });
 
-        client.on('user-left', (user) => {
+        client.on('user-left', (user: IAgoraRTCRemoteUser) => {
           if (!mountedRef.current) return;
           setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
           // If no users left, end the call
@@ -332,7 +337,10 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
         });
 
         // Add network quality monitoring
-        client.on('network-quality', (stats) => {
+        client.on('network-quality', (stats: { 
+          uplinkNetworkQuality: number;
+          downlinkNetworkQuality: number;
+        }) => {
           setCallStats(prev => ({
             ...prev,
             networkQuality: {
@@ -343,7 +351,11 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
         });
 
         // Add connection state change monitoring
-        client.on('connection-state-change', (curState, prevState, reason) => {
+        client.on('connection-state-change', (
+          curState: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTING', 
+          prevState: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTING',
+          reason?: string
+        ) => {
           console.log('Connection state changed:', curState, prevState, reason);
           setIsConnected(curState === 'CONNECTED');
         });
@@ -372,15 +384,15 @@ export function CallInterface({ channelName, isVideo, onEndCall }: CallInterface
 
   const toggleAudio = async () => {
     if (localTracks.audioTrack) {
-      await localTracks.audioTrack.setEnabled(!isAudioMuted);
       setIsAudioMuted(!isAudioMuted);
+      await localTracks.audioTrack.setEnabled(isAudioMuted);
     }
   };
 
   const toggleVideo = async () => {
     if (localTracks.videoTrack) {
-      await localTracks.videoTrack.setEnabled(!isVideoMuted);
       setIsVideoMuted(!isVideoMuted);
+      await localTracks.videoTrack.setEnabled(isVideoMuted);
     }
   };
 
