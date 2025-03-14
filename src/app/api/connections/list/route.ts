@@ -1,5 +1,6 @@
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { type Connection } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -45,16 +46,24 @@ export async function GET() {
     });
 
     // Format the connections based on user role
-    const formattedConnections = connections.map((connection: any) => {
-      if (session.user.id === connection.mentorId) {
+    const formattedConnections = connections.map((connection) => {
+      // Properly type the connection
+      type ConnectionWithUsers = Connection & {
+        mentor: { id: string; name: string | null; image: string | null };
+        mentee: { id: string; name: string | null; image: string | null };
+      };
+      
+      const typedConnection = connection as ConnectionWithUsers;
+      
+      if (session.user.id === typedConnection.mentorId) {
         return {
-          ...connection,
-          otherUser: connection.mentee,
+          ...typedConnection,
+          otherUser: typedConnection.mentee,
         };
       } else {
         return {
-          ...connection,
-          otherUser: connection.mentor,
+          ...typedConnection,
+          otherUser: typedConnection.mentor,
         };
       }
     });
