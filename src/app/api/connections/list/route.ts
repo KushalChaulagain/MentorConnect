@@ -15,13 +15,14 @@ interface ConnectionWithUsers {
   mentee: { id: string; name: string | null; image: string | null };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    // Use exactly the same structure as mentee route
     const connections = await prisma.connection.findMany({
       where: {
         OR: [
@@ -58,7 +59,6 @@ export async function GET() {
 
     // Format the connections based on user role
     const formattedConnections = connections.map((connection) => {
-      // Properly type the connection
       const typedConnection = connection as ConnectionWithUsers;
       
       if (session.user.id === typedConnection.mentorId) {

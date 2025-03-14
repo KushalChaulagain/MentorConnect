@@ -3,10 +3,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AgoraRTC, {
-  IAgoraRTCRemoteUser,
-  ICameraVideoTrack,
-  ILocalVideoTrack,
-  IMicrophoneAudioTrack
+    IAgoraRTCRemoteUser,
+    ICameraVideoTrack,
+    ILocalVideoTrack,
+    IMicrophoneAudioTrack
 } from 'agora-rtc-sdk-ng';
 import { Expand, Mic, MicOff, Monitor, PhoneOff, Signal, Video, VideoOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
