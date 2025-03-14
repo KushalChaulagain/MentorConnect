@@ -1,8 +1,19 @@
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { type Connection } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+
+// Define connection interface locally
+interface ConnectionWithUsers {
+  id: string;
+  mentorId: string;
+  menteeId: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  mentor: { id: string; name: string | null; image: string | null };
+  mentee: { id: string; name: string | null; image: string | null };
+}
 
 export async function GET() {
   try {
@@ -48,11 +59,6 @@ export async function GET() {
     // Format the connections based on user role
     const formattedConnections = connections.map((connection) => {
       // Properly type the connection
-      type ConnectionWithUsers = Connection & {
-        mentor: { id: string; name: string | null; image: string | null };
-        mentee: { id: string; name: string | null; image: string | null };
-      };
-      
       const typedConnection = connection as ConnectionWithUsers;
       
       if (session.user.id === typedConnection.mentorId) {
