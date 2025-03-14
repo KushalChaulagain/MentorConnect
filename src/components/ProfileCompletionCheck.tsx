@@ -15,70 +15,69 @@ export default function ProfileCompletionCheck({
   requiredForContent = false,
   type 
 }: ProfileCompletionCheckProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [componentReady, setComponentReady] = useState(false);
   
-  // Determine user role to check
+  // Determine user role to check - but don't assume it yet until we know for sure
   const userRole = type || session?.user?.role;
   const isMentor = userRole === "MENTOR";
 
   useEffect(() => {
+    // Skip if session is still loading or if we're missing user data
+    if (status === "loading" || !session?.user?.id) {
+      return;
+    }
+
+    // Set a timeout to ensure we show content even if the profile API is slow
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        setComponentReady(true);
+        console.log("Setting componentReady=true due to timeout, continuing with children render");
+      }
+    }, 1000); // Wait 1 second then show content even if profile is still loading
+
     const fetchProfileData = async () => {
       try {
         // Add fromOnboarding parameter to ensure we get an accurate completion status
         console.log(`Fetching profile data for ${userRole}...`);
         const response = await fetch("/api/profile?fromOnboarding=true");
+        
         if (response.ok) {
           const data = await response.json();
           
           // Log all the raw data so we can see exactly what the server is sending
           console.log(`${userRole} PROFILE RAW DATA:`, JSON.stringify(data, null, 2));
-          
-          // Get completion status directly from the server (most accurate)
-          const serverCompletionStatus = userRole === "MENTOR"
-            ? data?.mentorProfile?.completionStatus || data?.completionStatus
-            : data?.menteeProfile?.completionStatus || data?.completionStatus;
-          
-          // Check missing fields as a fallback
-          const missing = getMissingFields(data, userRole === "MENTOR");
-          const isComplete = serverCompletionStatus === 100 || serverCompletionStatus === "100%" || missing.length === 0;
-          
-          // Add debug for verification status - considering both isVerified flag and completeness
-          const hasVerifiedFlag = userRole === "MENTOR" 
-            ? data?.mentorProfile?.isVerified 
-            : data?.menteeProfile?.isVerified;
-          
-          console.log(`Profile status for ${userRole}:`, {
-            serverCompletionStatus,
-            missingFields: missing,
-            isComplete,
-            hasVerifiedFlag,
-            effectiveVerificationStatus: hasVerifiedFlag || isComplete ? 'Verified' : 'Not verified'
-          });
-          
           setProfileData(data);
         }
       } catch (error) {
         console.error("Error fetching profile data:", error);
       } finally {
         setLoading(false);
+        setComponentReady(true);
+        clearTimeout(timeoutId); // Clear timeout since we have finished loading
       }
     };
 
-    if (session?.user) {
-      fetchProfileData();
-    }
-  }, [session, userRole]);
+    fetchProfileData();
+
+    return () => clearTimeout(timeoutId);
+  }, [session, userRole, status, loading]);
+
+  // If we don't have a session yet or the component is not ready, show a minimal loading state
+  if (!componentReady) {
+    return (
+      <div className="min-h-[50px] opacity-0 transition-opacity duration-150">
+        {/* This creates space but is invisible during loading */}
+        {children}
+      </div>
+    );
+  }
 
   // Only apply if the user's role matches the expected type
   if (!session?.user || (type && session.user.role !== type)) {
-    return <>{children}</>;
-  }
-
-  // Still loading
-  if (loading) {
     return <>{children}</>;
   }
   
