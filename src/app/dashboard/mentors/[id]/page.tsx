@@ -231,7 +231,6 @@ export default function MentorProfilePage() {
                       <SkillBadge 
                         key={skill} 
                         skill={skill}
-                        showRemoveButton={false}
                       />
                     ))}
                   </div>

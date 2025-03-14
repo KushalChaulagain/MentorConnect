@@ -18,6 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Add Devicon for tech icons in skill badges */}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css" />
+      </head>
       <body className={`${inter.className} bg-[#0F172A] text-gray-200`}>
         <Providers>
           <ConditionalNavbar />

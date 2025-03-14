@@ -758,13 +758,28 @@ export default function EditProfilePage() {
                     </div>
                     
                     {/* Add validation message for skills */}
-                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg flex items-start space-x-2">
-                      <div className="text-amber-500 dark:text-amber-400 mt-0.5">ℹ️</div>
+                    <div className="p-4 bg-slate-800/70 border border-indigo-700/50 rounded-lg flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="w-5 h-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="12" />
+                          <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                      </div>
                       <div>
-                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300">At least 3 skills required</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                          Add a minimum of 3 skills to achieve verified mentor status. You currently have {skills.length} skill{skills.length !== 1 ? 's' : ''}.
+                        <p className="text-sm font-medium text-indigo-300">At least 3 skills required</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Add a minimum of 3 skills to achieve verified mentor status. 
+                          <span className={skills.length >= 3 ? "text-green-400 ml-1" : "text-amber-400 ml-1"}>
+                            You currently have {skills.length} skill{skills.length !== 1 ? 's' : ''}.
+                          </span>
                         </p>
+                        <div className="mt-2 w-full bg-slate-700/50 rounded-full h-1.5">
+                          <div 
+                            className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-1.5 rounded-full transition-all duration-500" 
+                            style={{ width: `${Math.min(100, (skills.length / 3) * 100)}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
