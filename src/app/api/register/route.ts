@@ -16,25 +16,7 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, role, recaptchaToken } = await req.json();
-
-    // Verify reCAPTCHA token
-    const recaptchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${recaptchaToken}`,
-    });
-
-    const recaptchaData = await recaptchaResponse.json();
-
-    if (!recaptchaData.success) {
-      return NextResponse.json(
-        { message: 'Invalid reCAPTCHA. Please try again.' },
-        { status: 400 }
-      );
-    }
+    const { name, email, password, role } = await req.json();
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
