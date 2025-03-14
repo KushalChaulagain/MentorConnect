@@ -1,7 +1,6 @@
 import MenteeDashboardClient from "@/components/mentee-dashboard-client";
 import { getConnections, getTopMentors } from "@/lib/api-services";
 import { auth } from "@/lib/auth";
-import { Connection } from "@prisma/client";
 import { Metadata } from "next";
 import { Session as AuthSession } from "next-auth";
 
@@ -33,7 +32,7 @@ export default async function MenteeDashboardPage() {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <MenteeDashboardClient 
-        initialConnections={connections as Connection[]}
+        initialConnections={connections as any}
         initialTopMentors={topMentors}
         session={session as AuthSession}
       />

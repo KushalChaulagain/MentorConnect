@@ -308,7 +308,10 @@ export default function ProfilePage() {
               <div>
                 <h3 className="font-semibold text-amber-800 dark:text-amber-300">Complete your profile</h3>
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Complete your profile to increase your visibility to potential mentees.
+                 {profile?.isMentor ? 
+                  "Complete your profile to increase your visibility to potential mentees." :
+                  "Complete your profile to improve mentor matching and find the right mentors for your learning journey."
+                 }
                 </p>
               </div>
               <Button 

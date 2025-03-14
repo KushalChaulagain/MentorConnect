@@ -1,6 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -116,51 +119,77 @@ export default function ProfileCompletionCheck({
     return <>{children}</>;
   }
   
-  // If we're not requiring completion for content, show warning above children
+  // If we're not requiring completion for content, show styled warning above children
   if (!requiredForContent) {
+    // Calculate completion percentage
+    const completionPercentage = typeof serverCompletionStatus === 'number' 
+      ? serverCompletionStatus 
+      : missingFields.length === 0 ? 100 : 0;
+      
     return (
       <>
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertTriangle className="h-5 w-5 text-yellow-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Your {isMentor ? "mentor" : "mentee"} profile is incomplete.
-                Complete your profile to get the most out of MentorConnect!
-              </p>
-              <div className="mt-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => router.push(`/dashboard/profile`)}
-                >
-                  Complete Profile
-                </Button>
+        {/* Modern styled banner according to cursor UI rules */}
+        <div className="mb-6 ml-10 mr-4 overflow-hidden rounded-xl bg-gradient-to-r from-[#1A1C26] to-[#181A24] border border-[#3949AB]/30 shadow-lg">
+          <div className="relative px-4 py-4 sm:px-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="rounded-full bg-[#3949AB]/10 p-2">
+                  <AlertTriangle className="h-5 w-5 text-[#00C6FF]" />
+                </div>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-lg font-medium text-white">
+                  Complete your {isMentor ? "mentor" : "mentee"} profile
+                </h3>
+                <div className="mt-1 text-sm text-[#E0E0E0] leading-relaxed">
+                  Your profile is only {completionPercentage}% complete. 
+                  {isMentor 
+                    ? " Enhance your visibility and attract more students by completing your profile."
+                    : " Complete your profile to improve mentor matching and find the right mentors for your learning journey."
+                  }
+                </div>
+                <div className="mt-3">
+                  <Link
+                    href="/dashboard/profile"
+                    className="inline-flex items-center rounded-lg bg-gradient-to-r from-[#3949AB] to-[#4A5BC7] px-4 py-2 text-sm font-medium text-white shadow-md hover:brightness-110 transition duration-300"
+                  >
+                    Complete Profile
+                  </Link>
+                </div>
+              </div>
+              <div className="absolute bottom-0 right-0 h-16 w-16 opacity-10">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#00C6FF" className="h-full w-full">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                </svg>
               </div>
             </div>
           </div>
+          <div className="h-1 w-full bg-gradient-to-r from-[#3949AB] to-[#00C6FF]"></div>
         </div>
         {children}
       </>
     );
   }
 
-  // Profile is incomplete and we're requiring completion for content
+  // Profile is incomplete and we're requiring completion for content - use styled version here too
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 max-w-xl mx-auto">
+    <div className="bg-gradient-to-r from-[#1A1C26] to-[#181A24] shadow-lg rounded-xl p-6 max-w-xl mx-auto border border-[#3949AB]/30">
       <div className="flex items-center justify-center mb-6">
-        <AlertTriangle className="h-12 w-12 text-yellow-500 mr-4" />
-        <h2 className="text-2xl font-bold text-center">Complete Your Profile</h2>
+        <div className="rounded-full bg-[#3949AB]/10 p-4 mr-4">
+          <AlertTriangle className="h-8 w-8 text-[#00C6FF]" />
+        </div>
+        <h2 className="text-2xl font-light text-white">Complete Your Profile</h2>
       </div>
       
-      <p className="text-gray-600 dark:text-gray-300 mb-6">
-        To access this feature, you need to complete your {isMentor ? "mentor" : "mentee"} profile. 
+      <p className="text-[#E0E0E0] mb-6 leading-relaxed text-[15px]">
+        {isMentor
+          ? "To attract students and increase your visibility, you need to complete your mentor profile."
+          : "To find the right mentors for your learning journey, you need to complete your mentee profile."
+        }
         The following information is missing:
       </p>
       
-      <ul className="list-disc pl-6 mb-6 space-y-1 text-gray-600 dark:text-gray-300">
+      <ul className="list-disc pl-6 mb-6 space-y-1 text-[#E0E0E0]">
         {missingFields.map((field) => (
           <li key={field}>{formatFieldName(field)}</li>
         ))}
@@ -169,11 +198,13 @@ export default function ProfileCompletionCheck({
       <div className="flex justify-center">
         <Button
           onClick={() => router.push(`/dashboard/profile`)}
-          className="w-full"
+          className="w-full bg-gradient-to-r from-[#3949AB] to-[#4A5BC7] hover:brightness-110 transition-all border-0 text-white px-6 py-2 rounded-lg"
         >
           Complete Profile Now
         </Button>
       </div>
+      
+      <div className="h-1 w-full bg-gradient-to-r from-[#3949AB] to-[#00C6FF] mt-6"></div>
     </div>
   );
 }
