@@ -277,7 +277,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 
-                {profile?.yearsOfExperience > 0 && (
+                {profile?.yearsOfExperience && profile.yearsOfExperience > 0 && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Briefcase size={16} className="mr-1" />
                     {profile.yearsOfExperience} {profile.yearsOfExperience === 1 ? 'year' : 'years'} experience
@@ -344,12 +344,11 @@ export default function ProfilePage() {
       )}
       
       {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-8" onValueChange={setActiveTab}>
+      <Tabs defaultValue="overview" className="space-y-5" onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:w-[600px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="availability">Availability</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
         {/* Overview Tab */}
@@ -741,50 +740,7 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
         
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>Manage your account preferences and settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div>
-                    <h3 className="font-medium">Profile Information</h3>
-                    <p className="text-sm text-muted-foreground">Update your personal and professional details</p>
-                  </div>
-                  <Button variant="outline" onClick={handleEditProfile}>Edit</Button>
-                </div>
-                
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div>
-                    <h3 className="font-medium">Password & Security</h3>
-                    <p className="text-sm text-muted-foreground">Manage your password and security settings</p>
-                  </div>
-                  <Button variant="outline" onClick={() => router.push('/dashboard/settings/security')}>Manage</Button>
-                </div>
-                
-                <div className="flex items-center justify-between py-3 border-b">
-                  <div>
-                    <h3 className="font-medium">Notifications</h3>
-                    <p className="text-sm text-muted-foreground">Customize which notifications you receive</p>
-                  </div>
-                  <Button variant="outline" onClick={() => router.push('/dashboard/settings/notifications')}>Configure</Button>
-                </div>
-                
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <h3 className="font-medium">Connected Accounts</h3>
-                    <p className="text-sm text-muted-foreground">Manage your linked social and external accounts</p>
-                  </div>
-                  <Button variant="outline" onClick={() => router.push('/dashboard/settings/connections')}>Manage</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        
       </Tabs>
     </div>
   );

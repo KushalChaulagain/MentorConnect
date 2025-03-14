@@ -103,12 +103,6 @@ export function NavUser({
                   Settings
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard/notifications">
-                  <Bell className="mr-2 h-4 w-4" />
-                  Notifications
-                </Link>
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>

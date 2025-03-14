@@ -44,8 +44,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ showMessages = false, setShowMessages, ...props }: AppSidebarProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
-  const router = useRouter()
-  const { state } = useSidebar()
 
   const toggleMessages = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -64,13 +62,7 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
         if (setShowMessages) setShowMessages(false)
       }
     },
-    {
-      title: "Messages",
-      url: "#",
-      icon: MessageSquare,
-      isActive: showMessages,
-      onClick: toggleMessages
-    },
+   
     {
       title: "Sessions",
       url: "/dashboard/sessions",
@@ -99,6 +91,13 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
       }
     },
     {
+      title: "Messages",
+      url: "#",
+      icon: MessageSquare,
+      isActive: showMessages,
+      onClick: toggleMessages
+    },
+    {
       title: "Profile",
       url: "/dashboard/profile",
       icon: User,
@@ -118,13 +117,6 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
       onClick: () => {
         if (setShowMessages) setShowMessages(false)
       }
-    },
-    {
-      title: "Messages",
-      url: "#",
-      icon: MessageSquare,
-      isActive: showMessages,
-      onClick: toggleMessages
     },
     {
       title: "Find Mentors",
@@ -152,6 +144,13 @@ export function AppSidebar({ showMessages = false, setShowMessages, ...props }: 
       onClick: () => {
         if (setShowMessages) setShowMessages(false)
       }
+    },
+    {
+      title: "Messages",
+      url: "#",
+      icon: MessageSquare,
+      isActive: showMessages,
+      onClick: toggleMessages
     },
     {
       title: "Profile",
