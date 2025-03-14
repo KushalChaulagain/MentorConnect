@@ -1,10 +1,10 @@
 "use client";
 
+import ProfileCompletionGuidance from "@/components/ProfileCompletionGuidance";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Award,
@@ -300,40 +300,9 @@ export default function ProfilePage() {
         </div>
       </div>
       
-      {/* Profile Completion Card */}
+      {/* Profile Completion Guidance */}
       {profile?.completionStatus && profile.completionStatus < 100 && (
-        <Card className="mb-8 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-semibold text-amber-800 dark:text-amber-300">Complete your profile</h3>
-                <p className="text-sm text-amber-700 dark:text-amber-400">
-                 {profile?.isMentor ? 
-                  "Complete your profile to increase your visibility to potential mentees." :
-                  "Complete your profile to improve mentor matching and find the right mentors for your learning journey."
-                 }
-                </p>
-              </div>
-              <Button 
-                onClick={handleEditProfile}
-                variant="outline" 
-                className="border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-              >
-                Continue Setup
-              </Button>
-            </div>
-            <div className="mt-4">
-              <Progress 
-                value={profile.completionStatus} 
-                className="h-2 bg-amber-200 dark:bg-amber-900" 
-                indicatorClassName="bg-amber-500 dark:bg-amber-500"
-              />
-              <p className="text-xs mt-1 text-amber-700 dark:text-amber-400">
-                {profile.completionStatus}% complete
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfileCompletionGuidance profile={profile} />
       )}
       
       {/* Profile Completed Badge */}

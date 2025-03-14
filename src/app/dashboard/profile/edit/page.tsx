@@ -2,50 +2,50 @@
 
 import SkillBadge from "@/components/SkillBadge";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
+    Avatar,
+    AvatarFallback,
+    AvatarImage
 } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "@/components/ui/card";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  ArrowLeft,
-  Briefcase,
-  Building,
-  Clock,
-  Github,
-  Globe,
-  Linkedin,
-  Loader2,
-  MapPin,
-  Upload
+    ArrowLeft,
+    Briefcase,
+    Building,
+    Clock,
+    Github,
+    Globe,
+    Linkedin,
+    Loader2,
+    MapPin,
+    Upload
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -533,7 +533,10 @@ export default function EditProfilePage() {
                     name="bio"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Bio</FormLabel>
+                        <FormLabel>Bio {userRole === "mentor" ? 
+                          <span className="text-xs text-muted-foreground">(min 50 chars)</span> : 
+                          <span className="text-xs text-muted-foreground">(min 25 chars)</span>}
+                        </FormLabel>
                         <FormControl>
                           <Textarea 
                             placeholder="Tell us about yourself" 
@@ -541,8 +544,12 @@ export default function EditProfilePage() {
                             {...field} 
                           />
                         </FormControl>
-                        <FormDescription>
-                          Write a short introduction about yourself
+                        <FormDescription className="flex justify-between">
+                          <span>Write a short introduction about yourself</span>
+                          <span className={(field.value?.length || 0) < (userRole === "mentor" ? 50 : 25) ? 
+                            "text-destructive" : "text-green-600"}>
+                            {field.value?.length || 0}/{userRole === "mentor" ? 50 : 25} chars
+                          </span>
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -1053,7 +1060,7 @@ export default function EditProfilePage() {
                     name="githubUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>GitHub Profile</FormLabel>
+                        <FormLabel>GitHub Profile <span className="text-xs text-red-500 ml-1">*</span></FormLabel>
                         <FormControl>
                           <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-ring">
                             <div className="px-3 text-muted-foreground">
@@ -1066,6 +1073,9 @@ export default function EditProfilePage() {
                             />
                           </div>
                         </FormControl>
+                        <FormDescription>
+                          Required for profile completion. Please provide your GitHub URL.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
