@@ -230,8 +230,7 @@ export default function MentorProfilePage() {
                     {mentor.skills.map((skill) => (
                       <SkillBadge 
                         key={skill} 
-                        skill={skill}
-                        showRemoveButton={false}
+                        skill={skill} 
                       />
                     ))}
                   </div>
