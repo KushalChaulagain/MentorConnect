@@ -1,24 +1,24 @@
 "use client"
 
 import {
-  BookOpen,
-  Calendar,
-  Clock,
-  Command,
-  HelpCircle,
-  History,
-  LayoutDashboard,
-  MessageSquare,
-  Search,
-  Send,
-  Settings,
-  Star,
-  User,
-  Users
+    BookOpen,
+    Calendar,
+    Clock,
+    Command,
+    HelpCircle,
+    History,
+    LayoutDashboard,
+    MessageSquare,
+    Search,
+    Send,
+    Settings,
+    Star,
+    User,
+    Users
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import * as React from "react"
 
 import { NavMain } from "@/components/nav-main"
@@ -26,14 +26,13 @@ import { NavProjects } from "@/components/nav-projects"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem
 } from "@/components/ui/sidebar"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {

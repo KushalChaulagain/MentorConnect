@@ -1,5 +1,6 @@
 'use client';
 
+import { EnhancedNotifications } from "@/components/enhanced-notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,16 +55,21 @@ export default function MenteeDashboardClient({
 
   return (
     <div className="space-y-8">
-      {/* Welcome Section */}
-      <div className="relative p-8 rounded-lg bg-gradient-to-br from-indigo-900 to-purple-900">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f46e5,#0ea5e9)] opacity-20 rounded-lg"></div>
-        <div className="relative">
-          <h1 className="text-3xl font-bold text-white">
-            Welcome back, {session?.user?.name?.split(' ')[0]}!
-          </h1>
-          <p className="mt-2 text-indigo-100">
-            Connect with expert mentors and accelerate your learning journey.
-          </p>
+      {/* Welcome Section with Notifications */}
+      <div className="flex items-start justify-between">
+        <div className="relative p-8 rounded-lg bg-gradient-to-br from-indigo-900 to-purple-900 flex-1">
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f46e5,#0ea5e9)] opacity-20 rounded-lg"></div>
+          <div className="relative">
+            <h1 className="text-3xl font-bold text-white">
+              Welcome back, {session?.user?.name?.split(' ')[0]}!
+            </h1>
+            <p className="mt-2 text-indigo-100">
+              Connect with expert mentors and accelerate your learning journey.
+            </p>
+          </div>
+        </div>
+        <div className="ml-4">
+          <EnhancedNotifications />
         </div>
       </div>
 
@@ -99,41 +105,46 @@ export default function MenteeDashboardClient({
                     </Badge>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <Link href={`/dashboard/messages?connectionId=${connection.id}`} className="flex-1">
-                    <Button size="sm" variant="outline" className="w-full">
-                      <MessageSquare className="w-4 h-4 mr-2" />
+                <div className="flex space-x-2">
+                  <Button size="sm" asChild className="flex-1">
+                    <Link href={`/dashboard/mentee/messages?connectionId=${connection.id}`}>
+                      <MessageSquare className="mr-1 h-4 w-4" />
                       Message
-                    </Button>
-                  </Link>
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Video className="w-4 h-4 mr-2" />
-                    Schedule
+                    </Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild className="flex-1">
+                    <Link href={`/dashboard/mentee/sessions/book?mentorId=${connection.mentor.id}`}>
+                      <Video className="mr-1 h-4 w-4" />
+                      Book Session
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
+          
           {connections.filter(c => c.status === 'ACCEPTED').length === 0 && (
             <Card className="col-span-full p-6 text-center">
-              <p className="text-muted-foreground mb-4">
-                You haven't connected with any mentors yet.
+              <p className="text-muted-foreground">
+                You haven't connected with any mentors yet. Explore our top mentors below to get started!
               </p>
-              <Link href="/dashboard/find-mentors">
-                <Button>Find Mentors</Button>
-              </Link>
+              <Button className="mt-4" asChild>
+                <Link href="/dashboard/mentee/find-mentors">
+                  Find Mentors
+                </Link>
+              </Button>
             </Card>
           )}
         </div>
       </div>
 
-      {/* Pending Requests Section */}
+      {/* Pending Connections */}
       {connections.filter(c => c.status === 'PENDING').length > 0 && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Pending Requests</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {connections.filter(c => c.status === 'PENDING').map((connection) => (
-              <Card key={connection.id} className="hover:shadow-lg transition-shadow">
+              <Card key={connection.id} className="border-dashed">
                 <CardHeader className="flex flex-row items-center gap-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={connection.mentor.image} alt={connection.mentor.name} />
@@ -142,7 +153,7 @@ export default function MenteeDashboardClient({
                   <div className="flex-1">
                     <CardTitle className="text-xl">{connection.mentor.name}</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {connection.mentor.mentorProfile.title}
+                      Request Pending
                     </p>
                   </div>
                   <Badge>Pending</Badge>
@@ -153,11 +164,11 @@ export default function MenteeDashboardClient({
         </div>
       )}
 
-      {/* Recommended Mentors Section */}
+      {/* Top Mentors Section */}
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Recommended Mentors</h2>
+        <h2 className="text-2xl font-semibold mb-4">Top Mentors for You</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {topMentors.slice(0, 3).map((mentor) => (
+          {topMentors.map((mentor) => (
             <Card key={mentor.id} className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center gap-4">
                 <Avatar className="h-12 w-12">
@@ -166,11 +177,15 @@ export default function MenteeDashboardClient({
                 </Avatar>
                 <div className="flex-1">
                   <CardTitle className="text-xl">{mentor.user.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{mentor.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {mentor.title}
+                  </p>
                 </div>
                 <div className="flex items-center">
                   <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                  <span className="ml-1 text-sm">{mentor.rating.toFixed(1)}</span>
+                  <span className="ml-1 text-sm">
+                    {mentor.rating.toFixed(1)}
+                  </span>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -181,12 +196,27 @@ export default function MenteeDashboardClient({
                     </Badge>
                   ))}
                 </div>
-                <Link href="/dashboard/find-mentors">
-                  <Button className="w-full">View Profile</Button>
-                </Link>
+                <Button size="sm" asChild className="w-full">
+                  <Link href={`/dashboard/mentee/mentor/${mentor.userId}`}>
+                    View Profile
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           ))}
+          
+          {topMentors.length === 0 && (
+            <Card className="col-span-full p-6 text-center">
+              <p className="text-muted-foreground">
+                We're still finding the perfect mentors for you. Check back soon!
+              </p>
+              <Button className="mt-4" asChild>
+                <Link href="/dashboard/mentee/find-mentors">
+                  Browse All Mentors
+                </Link>
+              </Button>
+            </Card>
+          )}
         </div>
       </div>
     </div>

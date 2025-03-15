@@ -96,7 +96,7 @@ export async function POST(req: Request) {
       // Trigger Pusher events for both chat and user channels
       await Promise.all([
         safeTriggerPusher(channelName, 'new-message', eventData),
-        safeTriggerPusher(`user-${recipientId}`, 'new-message', eventData)
+        safeTriggerPusher(`user-${recipientId}`, 'notification-message', eventData)
       ]);
       
       console.log('Pusher events triggered successfully');

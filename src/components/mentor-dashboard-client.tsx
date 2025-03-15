@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
-  Bell,
   Calendar,
   CalendarCheck,
   DollarSign,
@@ -19,19 +18,8 @@ import {
 import { Session } from "next-auth";
 import Link from "next/link";
 import { useState } from "react";
-
-// Temporary component until we build the actual one
-function ConnectionNotifications() {
-  return (
-    <Button 
-      variant="outline" 
-      size="icon" 
-      className="rounded-full hover:scale-105 transition-transform duration-300 bg-opacity-20 bg-gradient-to-r from-indigo-500 to-indigo-600"
-    >
-      <Bell className="h-4 w-4 text-indigo-200" />
-    </Button>
-  );
-}
+import { EnhancedNotifications } from "./enhanced-notifications";
+import { PendingConnectionRequests } from "./pending-connection-requests";
 
 type MentorStats = {
   upcomingSessions: number;
@@ -92,7 +80,7 @@ export default function MentorDashboardClient({
             Here's what's happening with your mentoring
           </p>
         </div>
-        <ConnectionNotifications />
+        <EnhancedNotifications />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -185,6 +173,12 @@ export default function MentorDashboardClient({
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Pending Connection Requests Section */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-white">Pending Connection Requests</h2>
+        <PendingConnectionRequests />
       </div>
 
       <Tabs defaultValue="sessions" className="space-y-6">
@@ -346,6 +340,7 @@ export default function MentorDashboardClient({
           { name: "Overview", href: "/dashboard/mentor" },
           { name: "Schedule", href: "/dashboard/mentor/schedule" },
           { name: "Messages", href: "/dashboard/mentor/messages" },
+          { name: "Connections", href: "/dashboard/mentor/connections" },
         ]}
       />
     </div>
