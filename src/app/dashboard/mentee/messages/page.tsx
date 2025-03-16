@@ -7,6 +7,6 @@ export default function MenteeMessagesPage() {
   useEffect(() => {
     redirect('/dashboard/messages');
   }, []);
-  
+
   return null;
 } 

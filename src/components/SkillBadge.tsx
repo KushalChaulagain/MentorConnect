@@ -138,8 +138,8 @@ interface SkillBadgeProps {
   className?: string;
 }
 
-export const SkillBadge: React.FC<SkillBadgeProps> = ({
-  skill,
+export const SkillBadge: React.FC<SkillBadgeProps> = ({ 
+  skill, 
   onRemove,
   className,
 }) => {
