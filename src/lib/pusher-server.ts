@@ -28,7 +28,6 @@ export function getPusherInstance() {
         useTLS: true,
       });
       
-      console.log('Server Pusher configuration loaded successfully');
       return pusherInstance;
     } catch (error) {
       console.error('Error initializing Pusher:', error);
@@ -49,7 +48,6 @@ export async function safeTriggerPusher(
   const pusher = getPusherInstance();
   
   if (!pusher) {
-    console.log(`Pusher not initialized, skipping event: ${event} on channel: ${channel}`);
     return false;
   }
   

@@ -1,17 +1,29 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
-import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "./ui/use-toast";
+
+interface Mentee {
+  id: string;
+  name: string;
+  image?: string | null;
+}
 
 interface AddEventDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedSlot?: { start: Date; end: Date };
-  onEventAdd: (event: { title: string; start: Date; end: Date }) => Promise<void>;
+  onEventAdd: (event: { 
+    title: string; 
+    start: Date; 
+    end: Date; 
+    menteeId?: string;
+    description?: string;
+  }) => Promise<void>;
 }
 
 export function AddEventDialog({
@@ -22,16 +34,75 @@ export function AddEventDialog({
 }: AddEventDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [menteeId, setMenteeId] = useState("");
+  const [mentees, setMentees] = useState<Mentee[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMentees, setIsLoadingMentees] = useState(false);
+  
+  // Fetch mentees when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchMentees();
+    }
+  }, [isOpen]);
+  
+  const fetchMentees = async () => {
+    setIsLoadingMentees(true);
+    try {
+      const response = await fetch("/api/connections/list");
+      if (!response.ok) {
+        throw new Error("Failed to fetch mentees");
+      }
+      const data = await response.json();
+      // Filter connections where current user is the mentor and convert to mentee format
+      const menteesList = data
+        .filter((connection: any) => connection.status === 'ACCEPTED')
+        .map((connection: any) => ({
+          id: connection.menteeId,
+          name: connection.mentee?.name || 'Unknown Mentee',
+          image: connection.mentee?.image
+        }));
+      setMentees(menteesList);
+    } catch (error) {
+      console.error("Error fetching mentees:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load mentees",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingMentees(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSlot) return;
+    
+    if (!title.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a title for this session",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!menteeId) {
+      toast({
+        title: "Error",
+        description: "Please select a mentee for this session",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
       await onEventAdd({
         title,
+        description,
+        menteeId,
         start: selectedSlot.start,
         end: selectedSlot.end,
       });
@@ -42,6 +113,7 @@ export function AddEventDialog({
       onClose();
       setTitle("");
       setDescription("");
+      setMenteeId("");
     } catch (error) {
       toast({
         title: "Error",
@@ -55,7 +127,7 @@ export function AddEventDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0B0E14] border-0 p-0 gap-0 max-w-md w-full rounded-lg shadow-xl text-white overflow-hidden">
+      <DialogContent className="bg-[#0B0E14] border-0 p-0 gap-0 max-w-md w-full rounded-lg shadow-xl text-white overflow-hidden"dialog-content-custom-class>
         <div className="flex items-center justify-between p-3 border-b border-[rgba(255,255,255,0.06)]">
           <h2 className="text-sm font-normal text-white">Add Event</h2>
           <Button
@@ -64,7 +136,6 @@ export function AddEventDialog({
             onClick={onClose}
             className="text-gray-400 hover:text-white hover:bg-[rgba(255,255,255,0.02)] rounded-full h-7 w-7 p-0"
           >
-            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
 
@@ -112,6 +183,41 @@ export function AddEventDialog({
                   {format(selectedSlot?.end || new Date(), "HH:mm")}
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Mentee</label>
+              <Select
+                value={menteeId}
+                onValueChange={(value) => setMenteeId(value)}
+                disabled={isLoadingMentees}
+              >
+                <SelectTrigger className="bg-[#0B0E14] border-[rgba(255,255,255,0.06)] text-white text-xs placeholder:text-gray-500 h-8 px-2">
+                  <SelectValue placeholder="Select a mentee" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0B0E14] border-[rgba(255,255,255,0.06)] text-white text-xs">
+                  {mentees.map((mentee) => (
+                    <SelectItem key={mentee.id} value={mentee.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-6 w-6 rounded-full bg-slate-700 flex items-center justify-center flex-shrink-0"
+                          style={{
+                            backgroundSize: "cover",
+                            ...(mentee.image ? { backgroundImage: `url(${mentee.image})` } : {}),
+                          }}
+                        >
+                          {!mentee.image && (
+                            <span className="text-xs text-white">
+                              {mentee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <span>{mentee.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

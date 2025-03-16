@@ -10,6 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 
+.cursorrules 
 # testing
 /coverage
 
@@ -33,8 +34,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# cursor
-.cursor/
+
 
 # vercel
 .vercel

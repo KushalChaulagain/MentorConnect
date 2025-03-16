@@ -54,25 +54,19 @@ export default function ProfileCompletionCheck({
       return;
     }
 
-    // Set a timeout to ensure we show content even if the profile API is slow
     const timeoutId = setTimeout(() => {
       if (loading) {
         setComponentReady(true);
-        console.log("Setting componentReady=true due to timeout, continuing with children render");
       }
     }, 1000); // Wait 1 second then show content even if profile is still loading
 
     const fetchProfileData = async () => {
       try {
         // Add fromOnboarding parameter to ensure we get an accurate completion status
-        console.log(`Fetching profile data for ${userRole}...`);
         const response = await fetch("/api/profile?fromOnboarding=true");
         
         if (response.ok) {
           const data = await response.json();
-          
-          // Log all the raw data so we can see exactly what the server is sending
-          console.log(`${userRole} PROFILE RAW DATA:`, JSON.stringify(data, null, 2));
           setProfileData(data);
         }
       } catch (error) {
@@ -106,7 +100,6 @@ export default function ProfileCompletionCheck({
   
   // If the server explicitly says profile is 100% complete, immediately render children without warnings
   if (profileData?.completionStatus === 100 || profileData?.completionStatus === "100%") {
-    console.log("Server reports 100% profile completion, skipping client-side checks");
     return <>{children}</>;
   }
 
@@ -126,14 +119,6 @@ export default function ProfileCompletionCheck({
     ? profileData?.mentorProfile?.isVerified 
     : profileData?.menteeProfile?.isVerified) || isProfileComplete;
   
-  console.log("Profile completion check:", {
-    serverCompletionStatus: profileData?.completionStatus,
-    isCompleteAccordingToServer,
-    missingFieldsCount: missingFields.length,
-    isProfileComplete,
-    isVerified
-  });
-    
   // Always show children without warnings for verified users or complete profiles
   if (isVerified) {
     return <>{children}</>;

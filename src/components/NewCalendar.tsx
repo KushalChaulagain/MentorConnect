@@ -1,6 +1,6 @@
 import { BookingStatus } from '@prisma/client';
 import { addDays, format, getWeek, isSameDay, isSameMonth, isToday, startOfMonth, startOfWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AvailabilityDisplay, AvailabilitySlot } from './AvailabilityDisplay';
 
@@ -30,22 +30,22 @@ interface CalendarProps {
   showAvailability?: boolean;
 }
 
-const getEventColor = (status: ExtendedBookingStatus) => {
+function getEventColor(status: ExtendedBookingStatus): string {
   switch (status) {
     case 'PENDING':
-      return 'bg-yellow-500';
+      return 'bg-amber-500/90 hover:bg-amber-500 border-amber-400/30';
     case 'CONFIRMED':
-      return 'bg-green-500';
+      return 'bg-blue-600/90 hover:bg-blue-600 border-blue-500/30';
     case 'COMPLETED':
-      return 'bg-blue-500';
+      return 'bg-emerald-600/90 hover:bg-emerald-600 border-emerald-500/30';
     case 'CANCELLED':
-      return 'bg-red-500';
+      return 'bg-red-500/90 hover:bg-red-500 border-red-400/30';
     case 'AVAILABLE':
-      return 'bg-gray-600/50';
+      return 'bg-cyan-500/70 hover:bg-cyan-500/90 border-cyan-400/30';
     default:
-      return 'bg-gray-500';
+      return 'bg-slate-600/90 hover:bg-slate-600 border-slate-500/30';
   }
-};
+}
 
 // Generate hours for the day (00:00 to 23:00)
 const hours = Array.from({ length: 24 }, (_, i) => 
@@ -187,12 +187,14 @@ export default function Calendar({
           </button>
         </div>
         
-        <button 
-          onClick={() => onSelectSlot?.({ start: new Date(), end: new Date(new Date().setHours(new Date().getHours() + 1)) })}
-          className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1"
-        >
-          <Plus size={14} /> Add Event
-        </button>
+        {isEditable && (
+          <button 
+            onClick={() => onSelectSlot?.({ start: new Date(), end: new Date(new Date().setHours(new Date().getHours() + 1)) })}
+            className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1"
+          >
+            <Plus size={14} /> Add Event
+          </button>
+        )}
       </div>
     </div>
   );
@@ -293,7 +295,7 @@ export default function Calendar({
                   
                   return (
                     <div 
-                      key={dayIndex} 
+                      key={`${dayIndex}-${hourIndex}`}
                       className={`flex-1 h-8 border-r border-b last:border-r-0 border-[rgba(255,255,255,0.06)] relative ${isHovered ? 'bg-[rgba(59,130,246,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'} transition-colors duration-100`}
                       onClick={() => handleSlotClick(day, hourIndex)}
                       onMouseEnter={() => setHoveredSlot(key)}
@@ -301,19 +303,36 @@ export default function Calendar({
                     >
                       {cellEvents.length > 0 ? (
                         cellEvents.map((event: CalendarEvent, eventIndex: number) => (
-                          <div 
-                            key={eventIndex}
-                            className={`absolute inset-0 m-0.5 p-1 text-xs rounded ${getEventColor(event.status)} text-white overflow-hidden`}
-                            onClick={(e) => {
-                              e.stopPropagation();
+                          <div
+                            key={`${dayIndex}-${eventIndex}`}
+                            className={`absolute p-2 rounded-md text-xs shadow-md border border-white/10 backdrop-blur-sm ${getEventColor(event.status)} text-white z-10 transition-all duration-200 ease-in-out hover:shadow-lg cursor-pointer`}
+                            style={{
+                              top: `${((event.start.getHours() * 60 + event.start.getMinutes()) / 1440) * 100}%`,
+                              height: `${((event.end.getTime() - event.start.getTime()) / (24 * 60 * 60 * 1000)) * 100}%`,
+                              width: '90%',
+                              left: '5%',
+                              minHeight: '25px',
+                            }}
+                            onClick={() => {
                               if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
-                              else if (event.status === 'AVAILABLE') handleSlotClick(day, hourIndex);
                             }}
                           >
-                            {event.title}
+                            <div className="flex flex-col h-full">
+                              <div className="font-medium flex items-center justify-between mb-1">
+                                <span className="truncate">{event.title}</span>
+                                <span className="text-[10px] bg-white/20 rounded-sm px-1">{event.status}</span>
+                              </div>
+                              <div className="text-[10px] flex-1 flex flex-col justify-between">
+                                <span>{format(event.start, 'HH:mm')}-{format(event.end, 'HH:mm')}</span>
+                                <div className="flex items-center mt-1 opacity-80">
+                                  <User className="h-2.5 w-2.5 mr-1" />
+                                  <span className="truncate">Session</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         ))
-                      ) : isHovered && (
+                      ) : isHovered && isEditable && (
                         <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
                           Add Event
                         </div>
@@ -392,21 +411,38 @@ export default function Calendar({
                   >
                     {eventMap.has(hourIndex) ? (
                       eventMap.get(hourIndex).map((event: CalendarEvent, eventIndex: number) => (
-                        <div 
-                          key={eventIndex}
-                          className={`absolute inset-0 m-0.5 p-1 text-xs rounded ${getEventColor(event.status)} text-white overflow-hidden flex items-center`}
-                          onClick={(e) => {
-                            e.stopPropagation();
+                        <div
+                          key={`${hourIndex}-${eventIndex}`}
+                          className={`absolute p-2 rounded-md text-xs shadow-md border border-white/10 backdrop-blur-sm ${getEventColor(event.status)} text-white z-10 transition-all duration-200 ease-in-out hover:shadow-lg cursor-pointer`}
+                          style={{
+                            top: `${((event.start.getHours() * 60 + event.start.getMinutes()) / 1440) * 100}%`,
+                            height: `${((event.end.getTime() - event.start.getTime()) / (24 * 60 * 60 * 1000)) * 100}%`,
+                            width: '90%',
+                            left: '5%',
+                            minHeight: '25px',
+                          }}
+                          onClick={() => {
                             if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
-                            else if (event.status === 'AVAILABLE') handleSlotClick(currentDate, hourIndex);
                           }}
                         >
-                          <span className="mr-2">{format(event.start, 'HH:mm')}</span>
-                          <span className="font-medium">{event.title}</span>
-                          {event.mentorName && <span className="ml-2 text-[10px] opacity-90">• {event.mentorName}</span>}
+                          <div className="flex flex-col h-full">
+                            <div className="font-medium flex items-center justify-between mb-1">
+                              <span className="truncate">{event.title}</span>
+                              <span className="text-[10px] bg-white/20 rounded-sm px-1">{event.status}</span>
+                            </div>
+                            <div className="text-[10px] flex-1 flex flex-col justify-between">
+                              <div className="flex items-center justify-between">
+                                <span>{format(event.start, 'HH:mm')}-{format(event.end, 'HH:mm')}</span>
+                              </div>
+                              <div className="flex items-center mt-1 opacity-80">
+                                <User className="h-2.5 w-2.5 mr-1" />
+                                <span className="truncate">Session</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       ))
-                    ) : isHovered && (
+                    ) : isHovered && isEditable && (
                       <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
                         Add Event
                       </div>
@@ -510,15 +546,29 @@ export default function Calendar({
                       <div className="space-y-1">
                         {dayEvents.slice(0, 3).map((event: CalendarEvent, eventIndex: number) => (
                           <div 
-                            key={eventIndex}
-                            className={`text-xs p-1 rounded ${getEventColor(event.status)} text-white truncate`}
+                            key={`${dayIndex}-${eventIndex}`}
+                            className={`text-xs p-1.5 rounded-md ${getEventColor(event.status)} text-white shadow-md border border-white/10 backdrop-blur-sm transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-0.5 cursor-pointer`}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
                               else if (event.status === 'AVAILABLE') handleSlotClick(day);
                             }}
                           >
-                            {format(event.start, 'HH:mm')} {event.title}
+                            <div className="flex flex-col">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-medium truncate">{event.title}</span>
+                                <span className="text-[10px] bg-white/20 rounded-sm px-1">{event.status}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span>{format(event.start, 'HH:mm')}-{format(event.end, 'HH:mm')}</span>
+                                {event.mentorName && event.menteeName && (
+                                  <span className="flex items-center opacity-80">
+                                    <User className="h-2 w-2 mr-0.5" />
+                                    <span className="truncate">Session</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         ))}
                         
@@ -528,7 +578,7 @@ export default function Calendar({
                           </div>
                         )}
                         
-                        {isHovered && dayEvents.length === 0 && (
+                        {isHovered && isEditable && dayEvents.length === 0 && (
                           <div className="text-xs text-gray-400 p-1 flex items-center justify-center">
                             Add Event
                           </div>
