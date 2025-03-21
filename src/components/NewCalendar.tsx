@@ -48,9 +48,16 @@ function getEventColor(status: ExtendedBookingStatus): string {
 }
 
 // Generate hours for the day (00:00 to 23:00)
-const hours = Array.from({ length: 24 }, (_, i) => 
-  i < 10 ? `0${i}:00` : `${i}:00`
-);
+const hours = Array.from({ length: 24 }, (_, i) => {
+  const hour12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+  const ampm = i < 12 ? 'AM' : 'PM';
+  const hour24 = i < 10 ? `0${i}` : `${i}`;
+  return {
+    hour24: `${hour24}:00`,
+    hour12: `${hour12}:00 ${ampm}`,
+    value: i
+  };
+});
 
 export default function Calendar({
   events,
@@ -68,6 +75,7 @@ export default function Calendar({
   const [currentView, setCurrentView] = useState(view);
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
   const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   useEffect(() => {
     setCurrentDate(date);
@@ -76,6 +84,14 @@ export default function Calendar({
   useEffect(() => {
     setCurrentView(view);
   }, [view]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(timer);
+  }, []);
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
@@ -282,10 +298,44 @@ export default function Calendar({
           
           {/* Time grid */}
           <div className="relative">
+            {/* Current time indicator */}
+            {(() => {
+              const now = new Date();
+              const currentHour = now.getHours();
+              const currentMinute = now.getMinutes();
+              const currentDayOfWeek = now.getDay();
+              
+              // Only show if current day is in the displayed week
+              const isCurrentWeekDisplayed = days.some(day => 
+                day.getDate() === now.getDate() && 
+                day.getMonth() === now.getMonth() && 
+                day.getFullYear() === now.getFullYear()
+              );
+              
+              if (!isCurrentWeekDisplayed) return null;
+              
+              // Calculate position
+              const topPosition = (currentHour + currentMinute / 60) * 8; // 8px is the height of each hour cell
+              
+              return (
+                <div 
+                  className="absolute left-[80px] right-0 z-20 pointer-events-none" 
+                  style={{ top: `${topPosition}px` }}
+                >
+                  <div className="flex items-center w-full">
+                    <div className="w-[20px] h-[16px] flex items-center justify-center bg-red-500 rounded-l text-[10px] text-white font-medium">
+                      {now.getHours() % 12 || 12}:{now.getMinutes().toString().padStart(2, '0')}
+                    </div>
+                    <div className="h-[1px] flex-1 bg-red-500"></div>
+                  </div>
+                </div>
+              );
+            })()}
+            
             {hours.map((hour, hourIndex) => (
               <div key={hourIndex} className="flex">
                 <div className="w-20 p-2 text-xs text-gray-400 border-r border-b border-[rgba(255,255,255,0.06)] bg-[#0B0E14]">
-                  {hour}
+                  {hour.hour12}
                 </div>
                 
                 {days.map((day, dayIndex) => {
@@ -297,7 +347,11 @@ export default function Calendar({
                     <div 
                       key={`${dayIndex}-${hourIndex}`}
                       className={`flex-1 h-8 border-r border-b last:border-r-0 border-[rgba(255,255,255,0.06)] relative ${isHovered ? 'bg-[rgba(59,130,246,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'} transition-colors duration-100`}
-                      onClick={() => handleSlotClick(day, hourIndex)}
+                      onClick={() => {
+                        if (cellEvents.length === 0) {
+                          handleSlotClick(day, hourIndex);
+                        }
+                      }}
                       onMouseEnter={() => setHoveredSlot(key)}
                       onMouseLeave={() => setHoveredSlot(null)}
                     >
@@ -313,7 +367,8 @@ export default function Calendar({
                               left: '5%',
                               minHeight: '25px',
                             }}
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
                             }}
                           >
@@ -393,6 +448,37 @@ export default function Calendar({
           
           {/* Time grid */}
           <div className="relative">
+            {/* Current time indicator */}
+            {(() => {
+              const now = new Date();
+              const currentHour = now.getHours();
+              const currentMinute = now.getMinutes();
+              
+              // Only show if current day is displayed
+              const isToday = currentDate.getDate() === now.getDate() && 
+                             currentDate.getMonth() === now.getMonth() && 
+                             currentDate.getFullYear() === now.getFullYear();
+              
+              if (!isToday) return null;
+              
+              // Calculate position
+              const topPosition = (currentHour + currentMinute / 60) * 8; // 8px is the height of each hour cell
+              
+              return (
+                <div 
+                  className="absolute left-[80px] right-0 z-20 pointer-events-none" 
+                  style={{ top: `${topPosition}px` }}
+                >
+                  <div className="flex items-center w-full">
+                    <div className="w-[20px] h-[16px] flex items-center justify-center rounded-l text-[10px] text-white font-medium">
+                      {now.getHours() % 12 || 12}:{now.getMinutes().toString().padStart(2, '0')}
+                    </div>
+                    <div className="h-[1px] flex-1 bg-green-500"></div>
+                  </div>
+                </div>
+              );
+            })()}
+            
             {hours.map((hour, hourIndex) => {
               const key = `day-${hourIndex}`;
               const isHovered = hoveredSlot === key;
@@ -400,12 +486,16 @@ export default function Calendar({
               return (
                 <div key={hourIndex} className="flex">
                   <div className="w-20 p-2 text-xs text-gray-400 border-r border-b border-[rgba(255,255,255,0.06)] bg-[#0B0E14]">
-                    {hour}
+                    {hour.hour12}
                   </div>
                   
                   <div 
                     className={`flex-1 h-8 border-b border-[rgba(255,255,255,0.06)] relative ${isHovered ? 'bg-[rgba(59,130,246,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'} transition-colors duration-100`}
-                    onClick={() => handleSlotClick(currentDate, hourIndex)}
+                    onClick={() => {
+                      if (!eventMap.has(hourIndex)) {
+                        handleSlotClick(currentDate, hourIndex);
+                      }
+                    }}
                     onMouseEnter={() => setHoveredSlot(key)}
                     onMouseLeave={() => setHoveredSlot(null)}
                   >
@@ -421,7 +511,8 @@ export default function Calendar({
                             left: '5%',
                             minHeight: '25px',
                           }}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (onSelectEvent && event.status !== 'AVAILABLE') onSelectEvent(event);
                           }}
                         >
@@ -535,7 +626,11 @@ export default function Calendar({
                       className={`min-h-[100px] p-1 border-r border-b last:border-r-0 border-[rgba(255,255,255,0.06)] ${
                         isCurrentMonth ? 'opacity-100' : 'opacity-40'
                       } ${isHovered ? 'bg-[rgba(59,130,246,0.08)]' : isCurrentDay ? 'bg-[rgba(255,255,255,0.03)]' : 'hover:bg-[rgba(255,255,255,0.02)]'} transition-colors duration-100`}
-                      onClick={() => handleSlotClick(day)}
+                      onClick={() => {
+                        if (dayEvents.length === 0) {
+                          handleSlotClick(day);
+                        }
+                      }}
                       onMouseEnter={() => setHoveredSlot(cellKey)}
                       onMouseLeave={() => setHoveredSlot(null)}
                     >

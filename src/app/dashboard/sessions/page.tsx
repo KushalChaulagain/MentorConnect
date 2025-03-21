@@ -3,16 +3,17 @@
 import { AddEventDialog } from "@/components/AddEventDialog"
 import MentorFeatureGuard from "@/components/MentorFeatureGuard"
 import Calendar from "@/components/NewCalendar"
+// import { SessionFeedbackDialog } from "@/components/SessionFeedbackDialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent
+    Dialog,
+    DialogContent
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import type { BookingStatus } from "@prisma/client"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon, Clock } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useEffect, useMemo, useState } from "react"
 
@@ -57,6 +58,7 @@ export default function SessionsPage() {
   const [mentorProfileId, setMentorProfileId] = useState<string | undefined>()
   const [showAvailability, setShowAvailability] = useState(false)
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false)
 
   useEffect(() => {
     fetchSessions()
@@ -65,6 +67,7 @@ export default function SessionsPage() {
     // Set up auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchSessions()
+      checkForCompletedSessions() // Automatically check for sessions that should be marked as completed
     }, 30000)
     
     setRefreshInterval(interval)
@@ -76,6 +79,54 @@ export default function SessionsPage() {
     }
   }, [])
 
+  const checkForCompletedSessions = async () => {
+    if (!Array.isArray(sessions)) return
+    
+    const now = new Date()
+    const sessionsThatShouldBeCompleted = sessions.filter(session => 
+      session.status === "CONFIRMED" && 
+      new Date(session.endTime) < now
+    )
+    
+    if (sessionsThatShouldBeCompleted.length === 0) return
+    
+    // Update sessions that have ended but are still marked as CONFIRMED
+    for (const sessionItem of sessionsThatShouldBeCompleted) {
+      try {
+        const response = await fetch(`/api/sessions/${sessionItem.id}/auto-complete`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          }
+        })
+        
+        if (response.ok) {
+          console.log(`Session ${sessionItem.id} automatically marked as completed`)
+          
+          // Notify the user that the session was auto-completed
+          toast({
+            title: "Session Completed",
+            description: `Your session "${sessionItem.title || 'Untitled Session'}" has been automatically marked as completed.`,
+            variant: "default",
+          })
+          
+          // To be implemented when SessionFeedbackDialog is ready
+          // if (session?.user?.role === 'MENTEE') {
+          //   setSelectedSession(sessionItem)
+          //   setIsFeedbackDialogOpen(true)
+          // }
+        }
+      } catch (error) {
+        console.error(`Error auto-completing session ${sessionItem.id}:`, error)
+      }
+    }
+    
+    // Refresh sessions after auto-completion
+    if (sessionsThatShouldBeCompleted.length > 0) {
+      fetchSessions()
+    }
+  }
+
   const fetchSessions = async () => {
     try {
       const response = await fetch("/api/sessions")
@@ -85,12 +136,18 @@ export default function SessionsPage() {
       // Defensive check to ensure we always set sessions as an array
       if (Array.isArray(data)) {
         setSessions(data);
+        // Check for sessions that should be auto-completed
+        setTimeout(() => checkForCompletedSessions(), 1000)
       } else if (data && typeof data === 'object') {
         // Check for nested arrays in various properties
         if (Array.isArray(data.bookings)) {
           setSessions(data.bookings);
+          // Check for sessions that should be auto-completed
+          setTimeout(() => checkForCompletedSessions(), 1000)
         } else if (data.success && Array.isArray(data.bookings)) {
           setSessions(data.bookings);
+          // Check for sessions that should be auto-completed
+          setTimeout(() => checkForCompletedSessions(), 1000)
         } else {
           console.error("Unexpected API response format:", data);
           setSessions([]);
@@ -248,30 +305,38 @@ export default function SessionsPage() {
     }
   }
 
-  // Create calendar events directly from the session data structure we're receiving
+  // Map sessions to calendar events
   const calendarEvents = useMemo(() => {
-    if (!Array.isArray(sessions) || sessions.length === 0) {
-      return [];
-    }
+    const currentDate = new Date();
+    const startOfToday = new Date(currentDate);
+    startOfToday.setHours(0, 0, 0, 0);
     
-    return sessions.map(session => {
-      // Make sure required date fields are properly parsed
-      const startTime = new Date(session.startTime);
-      const endTime = new Date(session.endTime);
-      
-      // Create an event object that matches the CalendarEvent interface
-      return {
+    return sessions
+      .filter(session => {
+        // Keep all upcoming sessions (PENDING, CONFIRMED)
+        if (session.status === 'PENDING' || session.status === 'CONFIRMED') {
+          return true;
+        }
+        
+        // For COMPLETED or CANCELLED sessions, only show them if they're from today
+        if (session.status === 'COMPLETED' || session.status === 'CANCELLED') {
+          const endTime = new Date(session.endTime);
+          return endTime >= startOfToday;
+        }
+        
+        return false; // Filter out any other status
+      })
+      .map(session => ({
         id: session.id,
-        title: session.title || 'Untitled Session',
-        start: startTime,
-        end: endTime,
-        status: session.status || 'CONFIRMED',
-        // Use mentee.name or fallback to default
-        menteeName: session.mentee?.name || 'Unknown Mentee',
-        // Use mentorProfile.user.name or fallback
-        mentorName: session.mentorProfile?.user?.name || 'Unknown Mentor'
-      };
-    });
+        title: session.title || 'Session',
+        start: new Date(session.startTime),
+        end: new Date(session.endTime),
+        status: session.status || 'PENDING',
+        mentorName: session.mentorProfile?.user?.name || 'Mentor',
+        menteeName: session.mentee?.name || 'Mentee',
+        menteeId: session.menteeId,
+        description: session.description,
+      }));
   }, [sessions]);
 
   // Also add safety to the event selection handler
@@ -319,12 +384,6 @@ export default function SessionsPage() {
   const handleCancelSession = () => {
     if (selectedSession) {
       handleSessionUpdate(selectedSession.id, "CANCELLED");
-    }
-  };
-
-  const handleCompleteSession = () => {
-    if (selectedSession) {
-      handleSessionUpdate(selectedSession.id, "COMPLETED");
     }
   };
 
@@ -470,6 +529,12 @@ export default function SessionsPage() {
                   <Badge variant={getStatusBadgeVariant(selectedSession?.status || 'CONFIRMED')}>
                     {selectedSession?.status || 'CONFIRMED'}
                   </Badge>
+                  {selectedSession?.status === 'CONFIRMED' && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      <Clock className="inline-block h-3 w-3 mr-1" />
+                      Session will automatically complete when the scheduled end time passes.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -484,16 +549,6 @@ export default function SessionsPage() {
                     Cancel Session
                   </Button>
                 )}
-                {selectedSession?.status === 'CONFIRMED' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleCompleteSession}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
-                  >
-                    Complete
-                  </Button>
-                )}
               </div>
             </div>
           </DialogContent>
@@ -506,6 +561,15 @@ export default function SessionsPage() {
           selectedSlot={selectedSlot}
           onEventAdd={handleAddEvent}
         />
+
+        {/* Add the SessionFeedbackDialog component */}
+        {/* 
+        <SessionFeedbackDialog
+          isOpen={isFeedbackDialogOpen}
+          onClose={() => setIsFeedbackDialogOpen(false)}
+          session={selectedSession}
+        />
+        */}
       </div>
     </MentorFeatureGuard>
   );
